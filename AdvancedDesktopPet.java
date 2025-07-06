@@ -6,9 +6,15 @@ import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Dictionary;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.sound.sampled.*;
+import java.net.URL;
 
 public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseMotionListener {
     private static final int DEFAULT_WIDTH = 128;
@@ -45,32 +51,397 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private boolean enemyEnabled = false;
     private List<EnemyWindow> enemies = new ArrayList<>();
     private Timer enemySpawnTimer;
+    private Timer enemyCleanupTimer;
     private List<ImageIcon> enemyImages = new ArrayList<>();
     private Random enemyRandom = new Random();
-    private int maxEnemies = 3;
+    private int maxEnemies = 5; // Increased from 3 to 5
     
     // Tray
     private SystemTray systemTray;
     private TrayIcon trayIcon;
     
     // Settings
-    private int petWidth = DEFAULT_WIDTH;
-    private int petHeight = DEFAULT_HEIGHT;
-    private boolean soundEnabled = true;
-    private float transparency = 1.0f; // 0.0 = invisible, 1.0 = opaque
+    int petWidth = DEFAULT_WIDTH;
+    int petHeight = DEFAULT_HEIGHT;
+    float transparency = 1.0f; // 0.0 = invisible, 1.0 = opaque
     private static List<AdvancedDesktopPet> allPets = new ArrayList<>();
     private JFrame settingsWindow = null;
-    private boolean allowCrossScreen = true; // Allow movement between screens
+    private boolean allowCrossScreen = false; // Allow movement between screens
     private JWindow floatingShortcut = null; // Cyberpunk floating shortcut
     
+    // Language support
+    private boolean isChinese = false; // false = English, true = Chinese
+    private Map<String, String> englishTexts = new HashMap<>();
+    private Map<String, String> chineseTexts = new HashMap<>();
+    
+    // Music system
+    private static Clip normalMusicClip;
+    private static Clip horrorMusicClip;
+    private static boolean musicEnabled = true;
+    private static boolean isPlayingHorror = false;
+    private static boolean wasPlayingHorrorBeforeDisable = false; // Track state before disable
+    private static Timer musicCheckTimer;
+    private static boolean musicInitialized = false; // Track if music system is already initialized
+    
+    // Loading screen
+    private JWindow loadingWindow;
+    private JLabel loadingLabel;
+    private JProgressBar loadingProgress;
+    private boolean isLoading = true;
+    
+    // Component references for easy updating
+    private JLabel petCountLabel;
+    private JLabel enemyInfoLabel;
+    private JLabel maxEnemiesLabel;
+    private JButton englishBtn;
+    private JButton chineseBtn;
+    private JButton duplicateBtn;
+    private JButton removeBtn;
+    private JButton hideBtn;
+    private JButton showBtn;
+    private JButton zoomInBtn;
+    private JButton zoomOutBtn;
+    private JButton testCrossScreenBtn;
+    private JButton spawnEnemyBtn;
+    private JButton clearEnemiesBtn;
+    private JButton forceCleanupBtn;
+    private JButton closeBtn;
+    private JButton exitBtn;
+    private JCheckBox crossScreenBox;
+    private JCheckBox musicBox;
+    private JCheckBox enemyBox;
+    
+    // Section header references for language updates
+    private JLabel languageSectionLabel;
+    private JLabel petManagementSectionLabel;
+    private JLabel transparencySectionLabel;
+    private JLabel sizeSectionLabel;
+    private JLabel movementSectionLabel;
+    private JLabel horrorSectionLabel;
+    
     public AdvancedDesktopPet() {
+        showLoadingScreen();
+        initializeLanguages();
         allPets.add(this); // Register this pet
-        initializePet();
-        loadAnimations();
-        setupWindow();
-        setupTrayIcon();
-        createFloatingShortcut(); // Add cyberpunk floating shortcut
-        startTimers();
+        // Load resources asynchronously
+        SwingUtilities.invokeLater(() -> {
+            loadResourcesAsync();
+        });
+    }
+    
+    private void showLoadingScreen() {
+        loadingWindow = new JWindow();
+        loadingWindow.setAlwaysOnTop(true);
+        loadingWindow.setSize(400, 200);
+        loadingWindow.setLocationRelativeTo(null);
+        loadingWindow.setBackground(new Color(0, 0, 0, 0));
+        
+        JPanel loadingPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Draw cyberpunk background
+                GradientPaint gradient = new GradientPaint(0, 0, new Color(20, 20, 40), getWidth(), getHeight(), new Color(40, 20, 60));
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                
+                // Draw neon border
+                g2d.setStroke(new BasicStroke(2));
+                g2d.setColor(new Color(0, 255, 255));
+                g2d.drawRect(1, 1, getWidth()-2, getHeight()-2);
+                
+                g2d.dispose();
+            }
+        };
+        loadingPanel.setLayout(new BorderLayout());
+        loadingPanel.setOpaque(false);
+        
+        // Loading text
+        loadingLabel = new JLabel("Loading Ayano...", JLabel.CENTER);
+        loadingLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        loadingLabel.setForeground(new Color(0, 255, 255));
+        loadingLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
+        
+        // Progress bar
+        loadingProgress = new JProgressBar(0, 100);
+        loadingProgress.setValue(0);
+        loadingProgress.setStringPainted(true);
+        loadingProgress.setString("Initializing...");
+        loadingProgress.setForeground(new Color(0, 255, 255));
+        loadingProgress.setBackground(new Color(40, 40, 60));
+        loadingProgress.setBorder(BorderFactory.createEmptyBorder(10, 20, 20, 20));
+        
+        loadingPanel.add(loadingLabel, BorderLayout.CENTER);
+        loadingPanel.add(loadingProgress, BorderLayout.SOUTH);
+        
+        loadingWindow.setContentPane(loadingPanel);
+        loadingWindow.setVisible(true);
+    }
+    
+    private void loadResourcesAsync() {
+        new Thread(() -> {
+            try {
+                // Step 1: Initialize languages (10%)
+                updateLoadingProgress(10, "Loading languages...");
+                Thread.sleep(100);
+                
+                // Step 2: Initialize pet window (20%)
+                updateLoadingProgress(20, "Initializing pet window...");
+                SwingUtilities.invokeAndWait(() -> initializePet());
+                Thread.sleep(100);
+                
+                // Step 3: Load animations (40%)
+                updateLoadingProgress(40, "Loading animations...");
+                SwingUtilities.invokeAndWait(() -> loadAnimations());
+                Thread.sleep(100);
+                
+                // Step 4: Initialize music (60%)
+                updateLoadingProgress(60, "Initializing music system...");
+                SwingUtilities.invokeAndWait(() -> initializeMusic());
+                Thread.sleep(100);
+                
+                // Step 5: Setup window and tray (80%)
+                updateLoadingProgress(80, "Setting up system tray...");
+                SwingUtilities.invokeAndWait(() -> {
+                    setupWindow();
+                    setupTrayIcon();
+                });
+                Thread.sleep(100);
+                
+                // Step 6: Create floating shortcut (90%)
+                updateLoadingProgress(90, "Creating floating shortcut...");
+                SwingUtilities.invokeAndWait(() -> createFloatingShortcut());
+                Thread.sleep(100);
+                
+                // Step 7: Start timers (100%)
+                updateLoadingProgress(100, "Starting timers...");
+                SwingUtilities.invokeAndWait(() -> startTimers());
+                Thread.sleep(200);
+                
+                // Hide loading screen and show pet
+                SwingUtilities.invokeLater(() -> {
+                    hideLoadingScreen();
+                    isLoading = false;
+                });
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    hideLoadingScreen();
+                    JOptionPane.showMessageDialog(null, "Error loading Ayano: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        }).start();
+    }
+    
+    private void updateLoadingProgress(int progress, String message) {
+        SwingUtilities.invokeLater(() -> {
+            if (loadingProgress != null) {
+                loadingProgress.setValue(progress);
+                loadingProgress.setString(message);
+            }
+        });
+    }
+    
+    private void hideLoadingScreen() {
+        if (loadingWindow != null) {
+            loadingWindow.setVisible(false);
+            loadingWindow.dispose();
+            loadingWindow = null;
+        }
+    }
+    
+    private void initializeLanguages() {
+        // Initialize English texts
+        englishTexts.put("settings_title", "Desktop Ayano Settings");
+        englishTexts.put("pet_management", "Ayano Management");
+        englishTexts.put("duplicate_pet", "Duplicate Ayano");
+        englishTexts.put("remove_pet", "Remove Ayano");
+        englishTexts.put("active_pets", "Active Ayanos");
+        englishTexts.put("transparency", "Transparency");
+        englishTexts.put("hide_pet", "Hide Ayano");
+        englishTexts.put("show_all_pets", "Show All Ayanos");
+        englishTexts.put("size", "Size");
+        englishTexts.put("zoom_in", "Zoom In");
+        englishTexts.put("zoom_out", "Zoom Out");
+        englishTexts.put("movement_settings", "Movement Settings");
+        englishTexts.put("allow_cross_screen", "Allow Cross-Screen Movement");
+        englishTexts.put("test_cross_screen", "Test Cross-Screen");
+        englishTexts.put("music_enabled", "Music Enabled");
+        englishTexts.put("horror_mode", "Horror Mode");
+        englishTexts.put("enable_enemies", "Enable Enemies");
+        englishTexts.put("spawn_enemy_now", "Spawn Enemy Now");
+        englishTexts.put("enemies", "Enemies");
+        englishTexts.put("max_enemies", "Max Enemies");
+        englishTexts.put("clear_all_enemies", "Clear All Enemies");
+        englishTexts.put("force_cleanup", "Force Cleanup");
+        englishTexts.put("close", "Close");
+        englishTexts.put("language", "Language");
+        englishTexts.put("english", "English");
+        englishTexts.put("chinese", "Chinese");
+        englishTexts.put("minimize", "Minimize");
+        englishTexts.put("close_window", "Close");
+        englishTexts.put("exit_program", "Exit Program");
+        englishTexts.put("confirm_exit", "Are you sure you want to exit the program?");
+        
+        // Initialize Chinese texts
+        chineseTexts.put("settings_title", "\u684c\u9762\u963f\u591c\u8bbe\u7f6e");
+        chineseTexts.put("pet_management", "\u963f\u591c\u7ba1\u7406");
+        chineseTexts.put("duplicate_pet", "\u590d\u5236\u963f\u591c");
+        chineseTexts.put("remove_pet", "\u5220\u9664\u963f\u591c");
+        chineseTexts.put("active_pets", "\u6d3b\u8dc3\u7684\u963f\u591c");
+        chineseTexts.put("transparency", "\u900f\u660e\u5ea6");
+        chineseTexts.put("hide_pet", "\u9690\u85cf\u963f\u591c");
+        chineseTexts.put("show_all_pets", "\u663e\u793a\u6240\u6709\u963f\u591c");
+        chineseTexts.put("size", "\u5927\u5c0f");
+        chineseTexts.put("zoom_in", "\u653e\u5927");
+        chineseTexts.put("zoom_out", "\u7f29\u5c0f");
+        chineseTexts.put("movement_settings", "\u79fb\u52a8\u8bbe\u7f6e");
+        chineseTexts.put("allow_cross_screen", "\u5141\u8bb8\u8de8\u5c4f\u5e55\u79fb\u52a8");
+        chineseTexts.put("test_cross_screen", "\u6d4b\u8bd5\u8de8\u5c4f\u5e55");
+        chineseTexts.put("music_enabled", "\u97f3\u4e50\u5f00\u542f");
+        chineseTexts.put("horror_mode", "\u6050\u6016\u6a21\u5f0f");
+        chineseTexts.put("enable_enemies", "\u542f\u7528\u654c\u4eba");
+        chineseTexts.put("spawn_enemy_now", "\u7acb\u5373\u751f\u6210\u654c\u4eba");
+        chineseTexts.put("enemies", "\u654c\u4eba");
+        chineseTexts.put("max_enemies", "\u6700\u5927\u654c\u4eba\u6570\u91cf");
+        chineseTexts.put("clear_all_enemies", "\u6e05\u9664\u6240\u6709\u654c\u4eba");
+        chineseTexts.put("force_cleanup", "\u5f3a\u5236\u6e05\u7406");
+        chineseTexts.put("close", "\u5173\u95ed");
+        chineseTexts.put("language", "\u8bed\u8a00");
+        chineseTexts.put("english", "\u82f1\u8bed");
+        chineseTexts.put("chinese", "\u4e2d\u6587");
+        chineseTexts.put("minimize", "\u6700\u5c0f\u5316");
+        chineseTexts.put("close_window", "\u5173\u95ed\u7a97\u53e3");
+        chineseTexts.put("exit_program", "\u9000\u51fa\u7a0b\u5e8f");
+        chineseTexts.put("confirm_exit", "\u60a8\u786e\u5b9a\u8981\u9000\u51fa\u7a0b\u5e8f\u5417\uff1f");
+    }
+    
+    private String getText(String key) {
+        Map<String, String> currentTexts = isChinese ? chineseTexts : englishTexts;
+        String result = currentTexts.getOrDefault(key, key);
+        // Remove debug output to reduce console spam
+        return result;
+    }
+    
+    private void refreshSettingsWindow() {
+        System.out.println("refreshSettingsWindow called. isChinese: " + isChinese);
+        if (settingsWindow != null && settingsWindow.isVisible()) {
+            System.out.println("Updating existing settings window components");
+            
+            // Update all text labels
+            updateSettingsWindowTexts();
+            
+            // Update button states
+            if (englishBtn != null) {
+                englishBtn.setText(getText("english"));
+                englishBtn.setEnabled(isChinese);
+                englishBtn.setBackground(isChinese ? new Color(70, 70, 90) : new Color(100, 100, 120));
+            }
+            if (chineseBtn != null) {
+                chineseBtn.setText(getText("chinese"));
+                chineseBtn.setEnabled(!isChinese);
+                chineseBtn.setBackground(!isChinese ? new Color(70, 70, 90) : new Color(100, 100, 120));
+            }
+            settingsWindow.revalidate();
+            settingsWindow.repaint();
+            System.out.println("Settings window updated successfully");
+        }
+    }
+    
+    private void updateSettingsWindowTexts() {
+        if (settingsWindow == null) return;
+        
+        // Update window title
+        settingsWindow.setTitle(getText("settings_title"));
+        
+        // Update all stored component references
+        if (petCountLabel != null) {
+            petCountLabel.setText(getText("active_pets") + ": " + allPets.size());
+        }
+        if (enemyInfoLabel != null) {
+            enemyInfoLabel.setText(getText("enemies") + ": " + enemies.size() + " / " + maxEnemies + " active");
+        }
+        if (maxEnemiesLabel != null) {
+            maxEnemiesLabel.setText(getText("max_enemies") + ": " + maxEnemies);
+        }
+        if (englishBtn != null) {
+            englishBtn.setText(getText("english"));
+            englishBtn.setEnabled(false);
+            englishBtn.setBackground(new Color(100, 100, 120));
+        }
+        if (chineseBtn != null) {
+            chineseBtn.setText(getText("chinese"));
+            chineseBtn.setEnabled(true);
+            chineseBtn.setBackground(!isChinese ? new Color(70, 70, 90) : new Color(100, 100, 120));
+        }
+        if (duplicateBtn != null) {
+            duplicateBtn.setText(getText("duplicate_pet"));
+        }
+        if (removeBtn != null) {
+            removeBtn.setText(getText("remove_pet"));
+        }
+        if (hideBtn != null) {
+            hideBtn.setText(getText("hide_pet"));
+        }
+        if (showBtn != null) {
+            showBtn.setText(getText("show_all_pets"));
+        }
+        if (zoomInBtn != null) {
+            zoomInBtn.setText(getText("zoom_in"));
+        }
+        if (zoomOutBtn != null) {
+            zoomOutBtn.setText(getText("zoom_out"));
+        }
+        if (testCrossScreenBtn != null) {
+            testCrossScreenBtn.setText(getText("test_cross_screen"));
+        }
+        if (spawnEnemyBtn != null) {
+            spawnEnemyBtn.setText(getText("spawn_enemy_now"));
+        }
+        if (clearEnemiesBtn != null) {
+            clearEnemiesBtn.setText(getText("clear_all_enemies"));
+        }
+        if (forceCleanupBtn != null) {
+            forceCleanupBtn.setText(getText("force_cleanup"));
+        }
+        if (closeBtn != null) {
+            closeBtn.setText(getText("close"));
+        }
+        if (exitBtn != null) {
+            exitBtn.setText(getText("exit_program"));
+        }
+        if (crossScreenBox != null) {
+            crossScreenBox.setText(getText("allow_cross_screen"));
+        }
+        if (musicBox != null) {
+            musicBox.setText(getText("music_enabled"));
+        }
+        if (enemyBox != null) {
+            enemyBox.setText(getText("enable_enemies"));
+        }
+        
+        // Update section headers
+        if (languageSectionLabel != null) {
+            languageSectionLabel.setText(getText("language"));
+        }
+        if (petManagementSectionLabel != null) {
+            petManagementSectionLabel.setText(getText("pet_management"));
+        }
+        if (transparencySectionLabel != null) {
+            transparencySectionLabel.setText(getText("transparency"));
+        }
+        if (sizeSectionLabel != null) {
+            sizeSectionLabel.setText(getText("size"));
+        }
+        if (movementSectionLabel != null) {
+            movementSectionLabel.setText(getText("movement_settings"));
+        }
+        if (horrorSectionLabel != null) {
+            horrorSectionLabel.setText(getText("horror_mode"));
+        }
     }
     
     private void initializePet() {
@@ -78,6 +449,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         setSize(petWidth, petHeight);
         // JWindow is already undecorated by default
         setBackground(new Color(0, 0, 0, 0));
+        setLayout(null); // Use absolute positioning for precise control
         
         // Position on primary screen safely
         Rectangle screenBounds = getPrimaryScreenBounds();
@@ -88,6 +460,9 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         petLabel = new JLabel();
         petLabel.setHorizontalAlignment(JLabel.CENTER);
         petLabel.setVerticalAlignment(JLabel.CENTER);
+        petLabel.setVisible(true);
+        petLabel.setOpaque(false);
+        petLabel.setBounds(0, 0, petWidth, petHeight);
         add(petLabel);
         
         addMouseListener(this);
@@ -166,17 +541,167 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         SwingUtilities.invokeLater(() -> updateIdleSprite());
     }
     
+
+    
+    private void initializeMusic() {
+        // Only initialize music system once for all instances
+        if (musicInitialized) {
+            return;
+        }
+        
+        try {
+            // Check if music files exist
+            File normalMusicFile = new File("music/normal.wav");
+            File horrorMusicFile = new File("music/horror.wav");
+            
+            if (!normalMusicFile.exists()) {
+                System.out.println("Normal music file not found: music/normal.wav");
+                return;
+            }
+            
+            if (!horrorMusicFile.exists()) {
+                System.out.println("Horror music file not found: music/horror.wav");
+                return;
+            }
+            
+            // Load normal music using Java's native WAV support
+            try {
+                AudioInputStream normalStream = AudioSystem.getAudioInputStream(normalMusicFile);
+                normalMusicClip = AudioSystem.getClip();
+                normalMusicClip.open(normalStream);
+                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                System.out.println("Normal music loaded successfully");
+            } catch (Exception e) {
+                System.out.println("Error loading normal music: " + e.getMessage());
+            }
+            
+            // Load horror music using Java's native WAV support
+            try {
+                AudioInputStream horrorStream = AudioSystem.getAudioInputStream(horrorMusicFile);
+                horrorMusicClip = AudioSystem.getClip();
+                horrorMusicClip.open(horrorStream);
+                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                System.out.println("Horror music loaded successfully");
+            } catch (Exception e) {
+                System.out.println("Error loading horror music: " + e.getMessage());
+            }
+            
+            // Start music check timer
+            musicCheckTimer = new Timer(1000, e -> checkAndUpdateMusic());
+            musicCheckTimer.start();
+            
+            // Start with normal music if enabled (and ensure horror is stopped)
+            if (musicEnabled && normalMusicClip != null) {
+                // Make sure horror music is stopped
+                if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
+                    horrorMusicClip.stop();
+                }
+                normalMusicClip.start();
+                isPlayingHorror = false;
+                System.out.println("Started normal music playback");
+            }
+            
+            musicInitialized = true;
+            
+        } catch (Exception e) {
+            System.out.println("Error initializing music: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private static void checkAndUpdateMusic() {
+        if (!musicEnabled) {
+            // If music is disabled, stop all music and remember state
+            if (normalMusicClip != null && normalMusicClip.isRunning()) {
+                normalMusicClip.stop();
+                System.out.println("Music disabled - stopped normal music");
+                wasPlayingHorrorBeforeDisable = false;
+            }
+            if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
+                horrorMusicClip.stop();
+                wasPlayingHorrorBeforeDisable = true;
+                System.out.println("Music disabled - stopped horror music");
+            }
+            return;
+        }
+        
+        // Music was just re-enabled - restart appropriate music
+        if (normalMusicClip != null && !normalMusicClip.isRunning() && 
+            horrorMusicClip != null && !horrorMusicClip.isRunning()) {
+            
+            boolean hasEnemies = !allPets.isEmpty() && allPets.stream().anyMatch(pet -> !pet.enemies.isEmpty());
+            
+            if (hasEnemies || wasPlayingHorrorBeforeDisable) {
+                // Resume horror music if enemies are present or was playing before
+                horrorMusicClip.start();
+                isPlayingHorror = true;
+                wasPlayingHorrorBeforeDisable = false;
+                System.out.println("Music re-enabled - started horror music");
+            } else {
+                // Resume normal music
+                normalMusicClip.start();
+                isPlayingHorror = false;
+                wasPlayingHorrorBeforeDisable = false;
+                System.out.println("Music re-enabled - started normal music");
+            }
+            return;
+        }
+        
+        boolean hasEnemies = !allPets.isEmpty() && allPets.stream().anyMatch(pet -> !pet.enemies.isEmpty());
+        
+        if (hasEnemies && !isPlayingHorror) {
+            // Switch to horror music
+            System.out.println("Enemies detected - switching to horror music");
+            if (normalMusicClip != null && normalMusicClip.isRunning()) {
+                normalMusicClip.stop();
+                System.out.println("Stopped normal music");
+            }
+            if (horrorMusicClip != null && !horrorMusicClip.isRunning()) {
+                horrorMusicClip.start();
+                isPlayingHorror = true;
+                System.out.println("Started horror music");
+            }
+        } else if (!hasEnemies && isPlayingHorror) {
+            // Switch to normal music
+            System.out.println("No enemies - switching to normal music");
+            if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
+                horrorMusicClip.stop();
+                System.out.println("Stopped horror music");
+            }
+            if (normalMusicClip != null && !normalMusicClip.isRunning()) {
+                normalMusicClip.start();
+                isPlayingHorror = false;
+                System.out.println("Started normal music");
+            }
+        }
+    }
+    
+    private static void setMusicEnabled(boolean enabled) {
+        musicEnabled = enabled;
+        if (musicEnabled) {
+            checkAndUpdateMusic(); // Start music if enabled
+        } else {
+            // Stop all music
+            if (normalMusicClip != null && normalMusicClip.isRunning()) {
+                normalMusicClip.stop();
+            }
+            if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
+                horrorMusicClip.stop();
+            }
+            isPlayingHorror = false;
+        }
+    }
+    
     private void loadEnemyImages() {
         enemyImages.clear();
         
         // Try to load enemy images from Image folder - using the specific chibi enemy names
-        String[] enemyFiles = {"Image\\敌人chibi01.png", "Image\\敌人chibi02.png", "Image\\敌人chibi03.png"};
+        String[] enemyFiles = {"Image\\\u654c\u4ebachibi01.png", "Image\\\u654c\u4ebachibi02.png", "Image\\\u654c\u4ebachibi03.png"};
         
         for (String filename : enemyFiles) {
             ImageIcon enemyImage = loadEnemyImageSafely(filename);
             if (enemyImage != null) {
                 enemyImages.add(enemyImage);
-                System.out.println("Loaded enemy image: " + filename);
             }
         }
         
@@ -187,48 +712,35 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 ImageIcon enemyImage = loadEnemyImageSafely(filename);
                 if (enemyImage != null) {
                     enemyImages.add(enemyImage);
-                    System.out.println("Loaded enemy image: " + filename);
                 }
             }
         }
         
         // If no enemy images found, create default scary enemies
         if (enemyImages.isEmpty()) {
-            System.out.println("No enemy images found, creating default scary enemies...");
             enemyImages.add(createDefaultEnemyAnimation(new Color(255, 0, 0, 200), "X"));
             enemyImages.add(createDefaultEnemyAnimation(new Color(0, 0, 0, 200), "!"));
             enemyImages.add(createDefaultEnemyAnimation(new Color(128, 0, 128, 200), "?"));
         }
-        
-        System.out.println("Total enemy images loaded: " + enemyImages.size());
     }
     
     private ImageIcon loadEnemyImageSafely(String filename) {
         try {
-            System.out.println("Attempting to load enemy image: " + filename);
-            
             // First try to load from resources
             java.net.URL resource = getClass().getResource("/" + filename);
             ImageIcon icon = null;
             
             if (resource != null) {
-                System.out.println("Found in resources: " + filename);
                 icon = new ImageIcon(resource);
             } else {
                 // Try to load from current directory
                 File file = new File(filename);
-                System.out.println("Checking file exists: " + filename + " -> " + file.exists());
-                System.out.println("Absolute path: " + file.getAbsolutePath());
-                
                 if (file.exists()) {
-                    System.out.println("Loading from file: " + filename);
                     icon = new ImageIcon(filename);
                 } else {
-                    System.out.println("File not found: " + filename);
-                    
                     // Try alternative encoding/path approaches
                     String[] alternatives = {
-                        filename.replace("敌人", "enemy"),
+                        filename.replace("\u654c\u4eba", "enemy"),
                         filename.replace("/", "\\"),
                         "Image\\" + filename.substring(Math.max(filename.lastIndexOf("/"), filename.lastIndexOf("\\")) + 1),
                         filename
@@ -236,10 +748,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                     
                     for (String alt : alternatives) {
                         File altFile = new File(alt);
-                        System.out.println("Trying alternative: " + alt + " -> " + altFile.exists());
                         if (altFile.exists()) {
                             icon = new ImageIcon(alt);
-                            System.out.println("Successfully loaded alternative: " + alt);
                             break;
                         }
                     }
@@ -248,17 +758,13 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             
             // Scale the enemy image
             if (icon != null && icon.getIconWidth() > 0 && icon.getIconHeight() > 0) {
-                System.out.println("Successfully loaded and scaling: " + filename);
                 Image img = icon.getImage();
                 Image scaledImg = img.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
                 return new ImageIcon(scaledImg);
-            } else {
-                System.out.println("Failed to load or invalid image: " + filename);
             }
             
         } catch (Exception e) {
-            System.out.println("Exception loading enemy image " + filename + ": " + e.getMessage());
-            e.printStackTrace();
+            // Silently fail for faster loading
         }
         return null;
     }
@@ -315,20 +821,25 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 }
             }
             
-            // Scale the image to fit the pet window if loaded successfully
+            // Always scale the image to fit the pet window if loaded successfully
             if (icon != null && icon.getIconWidth() > 0 && icon.getIconHeight() > 0) {
                 Image img = icon.getImage();
+                
+                // Use SCALE_SMOOTH for better quality scaling
                 Image scaledImg = img.getScaledInstance(petWidth, petHeight, Image.SCALE_SMOOTH);
+                
+                // Create a new ImageIcon with the scaled image
                 return new ImageIcon(scaledImg);
             }
             
         } catch (Exception e) {
-            System.out.println("Could not load " + filename + ": " + e.getMessage());
+            // Silently fail for faster loading
+            System.out.println("Error loading image " + filename + ": " + e.getMessage());
         }
         return null;
     }
-      
-      private ImageIcon createDefaultAnimation(Color color, String emoji) {
+    
+    private ImageIcon createDefaultAnimation(Color color, String emoji) {
         BufferedImage image = new BufferedImage(petWidth, petHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = image.createGraphics();
         
@@ -413,14 +924,6 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         settingsItem.addActionListener(e -> createSettingsWindow());
         popup.add(settingsItem);
         
-        Menu settingsMenu = new Menu("Advanced Settings");
-        
-        CheckboxMenuItem soundItem = new CheckboxMenuItem("Sound Enabled", soundEnabled);
-        soundItem.addItemListener(e -> soundEnabled = e.getStateChange() == ItemEvent.SELECTED);
-        settingsMenu.add(soundItem);
-        
-        popup.add(settingsMenu);
-        
         popup.addSeparator();
         
         MenuItem exitItem = new MenuItem("Exit");
@@ -483,7 +986,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         behaviorTimer.start();
         
         // Safety timer to check if pet is lost or stuck
-        safetyTimer = new Timer(5000, e -> {
+        safetyTimer = new Timer(12000, e -> {
             checkAndFixPetLocation();
         });
         safetyTimer.start();
@@ -498,6 +1001,9 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         if (enemySpawnTimer != null) {
             enemySpawnTimer.stop();
         }
+        if (enemyCleanupTimer != null) {
+            enemyCleanupTimer.stop();
+        }
         
         // Enemy spawn timer - spawn enemies at random intervals
         enemySpawnTimer = new Timer(10000 + enemyRandom.nextInt(20000), e -> {
@@ -508,6 +1014,14 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             enemySpawnTimer.setDelay(8000 + enemyRandom.nextInt(15000));
         });
         enemySpawnTimer.start();
+        
+        // Enemy cleanup timer - clean up stuck enemies every 15 seconds (more frequent)
+        enemyCleanupTimer = new Timer(15000, e -> {
+            if (enemyEnabled) {
+                cleanupStuckEnemies();
+            }
+        });
+        enemyCleanupTimer.start();
         
         // Spawn initial enemy after a delay
         Timer initialSpawnTimer = new Timer(3000, e -> {
@@ -521,9 +1035,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     
     private void spawnEnemy() {
         if (enemies.size() >= maxEnemies || enemyImages.isEmpty()) {
+            System.out.println("Cannot spawn enemy: " + enemies.size() + "/" + maxEnemies + " enemies, " + 
+                             (enemyImages.isEmpty() ? "no images" : "images available"));
             return;
         }
         
+        try {
         System.out.println("Spawning enemy... Current enemies: " + enemies.size());
         
         EnemyWindow enemy = new EnemyWindow(this, enemyImages);
@@ -531,25 +1048,192 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         // Remove enemy after some time (20-60 seconds)
         Timer despawnTimer = new Timer(20000 + enemyRandom.nextInt(40000), e -> {
+                try {
             if (enemies.contains(enemy)) {
+                        System.out.println("Despawning enemy...");
                 enemy.stopEnemy();
                 enemies.remove(enemy);
                 System.out.println("Enemy despawned. Remaining enemies: " + enemies.size());
             }
+                } catch (Exception ex) {
+                    System.out.println("Error during enemy despawn: " + ex.getMessage());
+                } finally {
             ((Timer) e.getSource()).stop();
+                }
         });
         despawnTimer.start();
+            
+            System.out.println("Enemy spawned successfully. Total enemies: " + enemies.size());
+        } catch (Exception e) {
+            System.out.println("Error spawning enemy: " + e.getMessage());
+        }
+    }
+    
+    // Method to update enemy info in settings window
+    private void updateEnemyInfo() {
+        if (settingsWindow != null && settingsWindow.isVisible()) {
+            // This will be called to refresh enemy count display
+            SwingUtilities.invokeLater(() -> {
+                // The labels will be updated when the settings window is refreshed
+            });
+        }
+    }
+    
+    // Clean up stuck or invalid enemies
+    private void cleanupStuckEnemies() {
+        if (enemies.isEmpty()) return;
+        
+        System.out.println("Checking for stuck enemies... Current count: " + enemies.size());
+        
+        List<EnemyWindow> enemiesToRemove = new ArrayList<>();
+        
+        for (EnemyWindow enemy : enemies) {
+            try {
+                // Check if enemy window is still valid
+                boolean shouldRemove = false;
+                
+                // Check if enemy is null
+                if (enemy == null) {
+                    System.out.println("Found null enemy, marking for removal");
+                    shouldRemove = true;
+                }
+                // Check if enemy is not visible (stuck)
+                else if (!enemy.isVisible()) {
+                    System.out.println("Found invisible enemy, marking for removal");
+                    shouldRemove = true;
+                }
+                // Check if enemy is not displayable (disposed)
+                else if (!enemy.isDisplayable()) {
+                    System.out.println("Found disposed enemy, marking for removal");
+                    shouldRemove = true;
+                }
+                // Check if enemy has invalid location (way off screen)
+                else if (enemy.getLocation().x < -10000 || enemy.getLocation().y < -10000) {
+                    System.out.println("Found enemy with invalid location, marking for removal");
+                    shouldRemove = true;
+                }
+                // Check if enemy timers are null (indicating it's broken)
+                else if (enemy.hasNullTimers()) {
+                    System.out.println("Found enemy with null timers, marking for removal");
+                    shouldRemove = true;
+                }
+                
+                if (shouldRemove) {
+                    enemiesToRemove.add(enemy);
+                }
+                
+            } catch (Exception e) {
+                System.out.println("Error checking enemy status, marking for removal: " + e.getMessage());
+                enemiesToRemove.add(enemy);
+            }
+        }
+        
+        // Remove stuck enemies
+        for (EnemyWindow enemy : enemiesToRemove) {
+            try {
+                System.out.println("Removing stuck enemy: " + (enemy != null ? enemy.hashCode() : "null"));
+                
+                // Stop all timers first
+                if (enemy != null) {
+                    enemy.stopAllTimers();
+                    
+                    // Force dispose
+                    enemy.setVisible(false);
+                    enemy.dispose();
+                }
+                
+                enemies.remove(enemy);
+                System.out.println("Removed stuck enemy");
+                
+            } catch (Exception e) {
+                System.out.println("Error removing stuck enemy: " + e.getMessage());
+                // Force remove from list even if dispose fails
+                enemies.remove(enemy);
+            }
+        }
+        
+        if (!enemiesToRemove.isEmpty()) {
+            System.out.println("Cleaned up " + enemiesToRemove.size() + " stuck enemies. Remaining: " + enemies.size());
+        }
+    }
+    
+    // Force remove all enemies (emergency cleanup)
+    public void forceRemoveAllEnemies() {
+        System.out.println("Force removing all enemies...");
+        
+        // Stop the enemy system first
+        stopEnemySystem();
+        
+        // Force dispose all enemy windows on EDT
+        SwingUtilities.invokeLater(() -> {
+            System.out.println("Force disposing all enemy windows...");
+            
+            // Create a copy of the list to avoid concurrent modification
+            List<EnemyWindow> enemiesToForceRemove = new ArrayList<>(enemies);
+            
+            for (EnemyWindow enemy : enemiesToForceRemove) {
+                try {
+                    System.out.println("Force disposing enemy: " + enemy.hashCode());
+                    
+                    // Stop all timers first
+                    enemy.stopAllTimers();
+                    
+                    // Force dispose the window
+                    enemy.setVisible(false);
+                    enemy.dispose();
+                    
+                    // Remove from list
+                    enemies.remove(enemy);
+                    
+                } catch (Exception e) {
+                    System.out.println("Error force disposing enemy: " + e.getMessage());
+                }
+            }
+            
+            // Clear the list completely
+            enemies.clear();
+            
+            // Run garbage collection to clean up any remaining references
+            System.gc();
+            
+            System.out.println("Force cleanup completed. Enemies remaining: " + enemies.size());
+        });
     }
     
     private void stopEnemySystem() {
+        System.out.println("Stopping enemy system... Current enemies: " + enemies.size());
+        
+        // Stop timers first
         if (enemySpawnTimer != null) {
             enemySpawnTimer.stop();
+            enemySpawnTimer = null;
+        }
+        
+        if (enemyCleanupTimer != null) {
+            enemyCleanupTimer.stop();
+            enemyCleanupTimer = null;
         }
         
         // Stop and remove all enemies
-        for (EnemyWindow enemy : enemies) {
+        List<EnemyWindow> enemiesToRemove = new ArrayList<>(enemies);
+        for (EnemyWindow enemy : enemiesToRemove) {
+            try {
+                System.out.println("Stopping enemy: " + enemy.hashCode());
             enemy.stopEnemy();
+            } catch (Exception e) {
+                System.out.println("Error stopping enemy: " + e.getMessage());
+                // Try to force dispose if normal stop fails
+                try {
+                    enemy.stopAllTimers();
+                    enemy.setVisible(false);
+                    enemy.dispose();
+                } catch (Exception ex) {
+                    System.out.println("Error force disposing enemy: " + ex.getMessage());
+                }
+            }
         }
+        
+        // Clear the list
         enemies.clear();
         System.out.println("Enemy system stopped. All enemies removed.");
     }
@@ -733,7 +1417,9 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         int safeX = primaryBounds.x + primaryBounds.width / 2 - petWidth / 2;
         int safeY = primaryBounds.y + primaryBounds.height / 2 - petHeight / 2;
         
-        return new Point(safeX, safeY);
+        // Ensure the safe location is actually within bounds
+        Point safeLocation = new Point(safeX, safeY);
+        return ensurePetFullyVisible(safeLocation);
     }
     
     private Point getSafeTarget(Point currentLocation) {
@@ -747,7 +1433,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         }
         
         // Create target away from edges with larger padding
-        int largePadding = 100; // Larger padding to avoid edges
+        int largePadding = Math.max(100, petWidth / 2); // Dynamic padding based on pet size
         int minX = screenBounds.x + largePadding;
         int maxX = screenBounds.x + screenBounds.width - petWidth - largePadding;
         int minY = screenBounds.y + largePadding;
@@ -755,13 +1441,17 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         // Ensure valid bounds
         if (maxX <= minX) {
-            minX = screenBounds.x + 50;
-            maxX = screenBounds.x + screenBounds.width - petWidth - 50;
+            minX = screenBounds.x + Math.max(50, petWidth / 4);
+            maxX = screenBounds.x + screenBounds.width - petWidth - Math.max(50, petWidth / 4);
         }
         if (maxY <= minY) {
-            minY = screenBounds.y + 50;
-            maxY = screenBounds.y + screenBounds.height - petHeight - 50;
+            minY = screenBounds.y + Math.max(50, petHeight / 4);
+            maxY = screenBounds.y + screenBounds.height - petHeight - Math.max(50, petHeight / 4);
         }
+        
+        // Ensure we have at least some space to work with
+        if (maxX <= minX) maxX = minX + petWidth;
+        if (maxY <= minY) maxY = minY + petHeight;
         
         // Generate target away from current position
         int targetX, targetY;
@@ -769,6 +1459,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             targetX = minX + random.nextInt(Math.max(1, maxX - minX));
             targetY = minY + random.nextInt(Math.max(1, maxY - minY));
         } while (Math.abs(targetX - currentLocation.x) < 150 || Math.abs(targetY - currentLocation.y) < 150);
+        
+        // Ensure the target is fully visible
+        Point target = new Point(targetX, targetY);
+        Point safeTarget = ensurePetFullyVisible(target);
+        targetX = safeTarget.x;
+        targetY = safeTarget.y;
         
         return new Point(targetX, targetY);
     }
@@ -864,30 +1560,28 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 int stepY = dy == 0 ? 0 : (dy > 0 ? 3 : -3);
                 
                 Point newLocation = new Point(current.x + stepX, current.y + stepY);
+                Point safeNewLocation = ensurePetFullyVisible(newLocation);
                 
-                // Check boundaries before moving - be more permissive for cross-screen movement
-                if (isMovementValid(current, newLocation)) {
-                    setLocation(newLocation);
-                } else {
-                    // If we hit a boundary, try to find a safe location first
-                    Point safeLocation = getClosestValidLocation(newLocation);
-                    if (safeLocation != null && !safeLocation.equals(current)) {
-                        setLocation(safeLocation);
-                    } else {
-                        // If we can't find a safe location, stop walking and find a new target
-                        isWalking = false;
-                        updateIdleSprite();
-                        ((Timer) e.getSource()).stop();
-                        
-                        // Schedule a new walk after a short delay
-                        Timer retryTimer = new Timer(1000, evt -> {
+                // Check if we're stuck (not making progress towards target)
+                if (safeNewLocation.equals(current)) {
+                    // We're stuck, pick a new target
+                    System.out.println("Pet is stuck trying to reach target, picking new target...");
+                    ((Timer) e.getSource()).stop();
+                    isWalking = false;
+                    updateIdleSprite();
+                    
+                    // Start a new walk after a short delay
+                    Timer retryTimer = new Timer(1000, evt -> {
+                        if (!isDragging) {
                             startRandomWalk();
-                            ((Timer) evt.getSource()).stop();
-                        });
-                        retryTimer.start();
-                        return;
-                    }
+                        }
+                        ((Timer) evt.getSource()).stop();
+                    });
+                    retryTimer.start();
+                    return;
                 }
+                
+                setLocation(safeNewLocation);
                 
                 // Update walking animation frame for leg sync
                 walkAnimationFrame = (walkAnimationFrame + 1) % 8;
@@ -918,8 +1612,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private void selectTargetOnScreen(Rectangle screenBounds) {
-        // Use larger padding to avoid edges better
-        int padding = 80; // Increased padding
+        // Use dynamic padding based on pet size to avoid edges better
+        int padding = Math.max(80, petWidth / 2); // Dynamic padding based on pet size
         int minX = screenBounds.x + padding;
         int maxX = screenBounds.x + screenBounds.width - petWidth - padding;
         int minY = screenBounds.y + padding;
@@ -927,12 +1621,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         // Ensure valid bounds with fallback
         if (maxX <= minX) {
-            minX = screenBounds.x + 30;
-            maxX = screenBounds.x + screenBounds.width - petWidth - 30;
+            minX = screenBounds.x + Math.max(30, petWidth / 4);
+            maxX = screenBounds.x + screenBounds.width - petWidth - Math.max(30, petWidth / 4);
         }
         if (maxY <= minY) {
-            minY = screenBounds.y + 30;
-            maxY = screenBounds.y + screenBounds.height - petHeight - 30;
+            minY = screenBounds.y + Math.max(30, petHeight / 4);
+            maxY = screenBounds.y + screenBounds.height - petHeight - Math.max(30, petHeight / 4);
         }
         
         // Ensure we have at least some space to work with
@@ -941,6 +1635,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         targetX = minX + random.nextInt(Math.max(1, maxX - minX));
         targetY = minY + random.nextInt(Math.max(1, maxY - minY));
+        
+        // Ensure the target is fully visible
+        Point target = new Point(targetX, targetY);
+        Point safeTarget = ensurePetFullyVisible(target);
+        targetX = safeTarget.x;
+        targetY = safeTarget.y;
     }
     
     private Rectangle getUsableScreenBounds() {
@@ -1124,14 +1824,9 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 mouseOnScreen.y - mouseOffset.y
             );
             
-            // Check if the new location is valid before setting it
-            if (isLocationValid(newLocation)) {
-                setLocation(newLocation);
-            } else {
-                // If invalid, find the closest valid location
-                Point validLocation = getClosestValidLocation(newLocation);
-                setLocation(validLocation);
-            }
+            // Always ensure the pet is fully visible when dragging
+            Point safeLocation = ensurePetFullyVisible(newLocation);
+            setLocation(safeLocation);
         }
     }
     
@@ -1189,6 +1884,108 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             bounds.x + (bounds.width - petWidth) / 2,
             bounds.y + (bounds.height - petHeight) / 2
         );
+    }
+    
+    private Point ensurePetFullyVisible(Point currentLocation) {
+        if (allowCrossScreen) {
+            return ensurePetFullyVisibleOnAnyScreen(currentLocation);
+        } else {
+            return ensurePetFullyVisibleOnCurrentScreen(currentLocation);
+        }
+    }
+    
+    private Point ensurePetFullyVisibleOnCurrentScreen(Point currentLocation) {
+        Rectangle screenBounds = getUsableScreenBounds();
+        
+        // Calculate the bounds of the pet
+        int petRight = currentLocation.x + petWidth;
+        int petBottom = currentLocation.y + petHeight;
+        
+        // Check if pet is being cut off
+        boolean needsRepositioning = false;
+        int newX = currentLocation.x;
+        int newY = currentLocation.y;
+        
+        // Check right edge (pet extends beyond right edge)
+        if (petRight > screenBounds.x + screenBounds.width) {
+            newX = screenBounds.x + screenBounds.width - petWidth;
+            needsRepositioning = true;
+            System.out.println("Pet was cut off on right edge. Pet right: " + petRight + ", Screen right: " + (screenBounds.x + screenBounds.width));
+        }
+        
+        // Check bottom edge (pet extends beyond bottom edge)
+        if (petBottom > screenBounds.y + screenBounds.height) {
+            newY = screenBounds.y + screenBounds.height - petHeight;
+            needsRepositioning = true;
+            System.out.println("Pet was cut off on bottom edge. Pet bottom: " + petBottom + ", Screen bottom: " + (screenBounds.y + screenBounds.height));
+        }
+        
+        // Check left edge (pet extends beyond left edge)
+        if (newX < screenBounds.x) {
+            newX = screenBounds.x;
+            needsRepositioning = true;
+            System.out.println("Pet was cut off on left edge. Pet left: " + currentLocation.x + ", Screen left: " + screenBounds.x);
+        }
+        
+        // Check top edge (pet extends beyond top edge)
+        if (newY < screenBounds.y) {
+            newY = screenBounds.y;
+            needsRepositioning = true;
+            System.out.println("Pet was cut off on top edge. Pet top: " + currentLocation.y + ", Screen top: " + screenBounds.y);
+        }
+        
+        // Additional safety check: ensure the new position is actually valid
+        if (needsRepositioning) {
+            // Make sure the new position doesn't cause the pet to be cut off in the other direction
+            if (newX + petWidth > screenBounds.x + screenBounds.width) {
+                newX = screenBounds.x + screenBounds.width - petWidth;
+            }
+            if (newY + petHeight > screenBounds.y + screenBounds.height) {
+                newY = screenBounds.y + screenBounds.height - petHeight;
+            }
+            if (newX < screenBounds.x) {
+                newX = screenBounds.x;
+            }
+            if (newY < screenBounds.y) {
+                newY = screenBounds.y;
+            }
+            
+            System.out.println("Pet repositioned from (" + currentLocation.x + ", " + currentLocation.y + 
+                             ") to (" + newX + ", " + newY + ")");
+        }
+        
+        return new Point(newX, newY);
+    }
+    
+    private Point ensurePetFullyVisibleOnAnyScreen(Point currentLocation) {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice[] devices = ge.getScreenDevices();
+        
+        // Find which screen the pet is currently on
+        for (GraphicsDevice device : devices) {
+            Rectangle screenBounds = device.getDefaultConfiguration().getBounds();
+            
+            // Check if pet is fully within this screen
+            if (currentLocation.x >= screenBounds.x && 
+                currentLocation.y >= screenBounds.y &&
+                currentLocation.x + petWidth <= screenBounds.x + screenBounds.width &&
+                currentLocation.y + petHeight <= screenBounds.y + screenBounds.height) {
+                
+                // Pet is fully visible on this screen, no need to move
+                return currentLocation;
+            }
+        }
+        
+        // Pet is not fully visible on any screen, find the best screen to place it
+        GraphicsDevice primaryDevice = ge.getDefaultScreenDevice();
+        Rectangle primaryBounds = primaryDevice.getDefaultConfiguration().getBounds();
+        
+        // Place pet in center of primary screen
+        int centerX = primaryBounds.x + (primaryBounds.width - petWidth) / 2;
+        int centerY = primaryBounds.y + (primaryBounds.height - petHeight) / 2;
+        
+        System.out.println("Pet was not fully visible on any screen, moved to primary screen center: (" + centerX + ", " + centerY + ")");
+        return new Point(centerX, centerY);
     }
     
     @Override
@@ -1293,6 +2090,11 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 System.out.println("Transparency not supported on this system");
             }
         }
+        
+        // Update all enemies' transparency
+        for (EnemyWindow enemy : enemies) {
+            enemy.updateFromPetSettings();
+        }
     }
     
     private void showAllPets() {
@@ -1313,8 +2115,33 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         petHeight = newHeight;
         setSize(petWidth, petHeight);
         
+        // Update petLabel bounds to match new size
+        if (petLabel != null) {
+            petLabel.setBounds(0, 0, petWidth, petHeight);
+            petLabel.setPreferredSize(new Dimension(petWidth, petHeight));
+        }
+        
+        // Move pet to center of screen after size change to avoid boundary issues
+        Rectangle screenBounds = getPrimaryScreenBounds();
+        int centerX = screenBounds.x + (screenBounds.width - petWidth) / 2;
+        int centerY = screenBounds.y + (screenBounds.height - petHeight) / 2;
+        setLocation(centerX, centerY);
+        
+        // Update all enemies' size
+        for (EnemyWindow enemy : enemies) {
+            enemy.updateFromPetSettings();
+        }
+        
         // Reload and rescale images
         reloadImagesWithNewSize();
+        
+        // Stop current walking to prevent conflicts
+        isWalking = false;
+        updateIdleSprite();
+        
+        // Force repaint to ensure proper display
+        revalidate();
+        repaint();
     }
     
     private void reloadImagesWithNewSize() {
@@ -1344,6 +2171,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             
             // Update current sprite
             updateIdleSprite();
+            
+            // Force repaint to ensure the new images are displayed
+            if (petLabel != null) {
+                petLabel.revalidate();
+                petLabel.repaint();
+            }
         });
     }
     
@@ -1418,14 +2251,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 g2d.setColor(new Color(255, 0, 255, 80));
                 g2d.drawRoundRect(7, 7, 66, 66, 12, 12);
                 
-                // Center icon
-                g2d.setColor(Color.WHITE);
-                g2d.setFont(new Font("Arial", Font.BOLD, 20));
-                FontMetrics fm = g2d.getFontMetrics();
-                String text = "⚙";
-                int x = (80 - fm.stringWidth(text)) / 2;
-                int y = (80 + fm.getAscent()) / 2;
-                g2d.drawString(text, x, y);
+                // Draw custom settings gear icon
+                drawSettingsGear(g2d, 40, 40, 15, Color.WHITE);
+                
+                // Add glow effect
+                g2d.setColor(new Color(0, 255, 255, 100));
+                drawSettingsGear(g2d, 41, 41, 15, new Color(0, 255, 255, 100));
             }
         };
         
@@ -1475,6 +2306,33 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         return panel;
     }
     
+    private void drawSettingsGear(Graphics2D g2d, int centerX, int centerY, int radius, Color color) {
+        g2d.setColor(color);
+        g2d.setStroke(new BasicStroke(2));
+        
+        // Draw outer circle
+        g2d.drawOval(centerX - radius, centerY - radius, radius * 2, radius * 2);
+        
+        // Draw inner circle
+        int innerRadius = radius / 2;
+        g2d.drawOval(centerX - innerRadius, centerY - innerRadius, innerRadius * 2, innerRadius * 2);
+        
+        // Draw gear teeth
+        int numTeeth = 8;
+        int toothLength = radius / 3;
+        for (int i = 0; i < numTeeth; i++) {
+            double angle = (2 * Math.PI * i) / numTeeth;
+            int x1 = centerX + (int)(radius * Math.cos(angle));
+            int y1 = centerY + (int)(radius * Math.sin(angle));
+            int x2 = centerX + (int)((radius + toothLength) * Math.cos(angle));
+            int y2 = centerY + (int)((radius + toothLength) * Math.sin(angle));
+            g2d.drawLine(x1, y1, x2, y2);
+        }
+        
+        // Draw center dot
+        g2d.fillOval(centerX - 2, centerY - 2, 4, 4);
+    }
+    
     private void createCyberpunkSettingsWindow() {
         if (settingsWindow != null) {
             settingsWindow.setVisible(true);
@@ -1484,9 +2342,9 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
 
         // Create stylish settings window
         settingsWindow = new JFrame();
-        settingsWindow.setTitle("Desktop Pet Settings");
+        settingsWindow.setTitle(getText("settings_title"));
         settingsWindow.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-        settingsWindow.setSize(480, 500);
+        settingsWindow.setSize(600, 500);
         settingsWindow.setResizable(false);
         settingsWindow.setLocationRelativeTo(null);
         settingsWindow.setUndecorated(true); // Remove default decorations
@@ -1501,91 +2359,133 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 // Dark background
                 GradientPaint bgGradient = new GradientPaint(0, 0, new Color(20, 20, 35), 
-                                                           480, 500, new Color(35, 20, 45));
+                                                           600, 500, new Color(35, 20, 45));
                 g2d.setPaint(bgGradient);
-                g2d.fillRect(0, 0, 480, 500);
+                g2d.fillRect(0, 0, 600, 500);
                 
                 // Border
                 g2d.setStroke(new BasicStroke(2));
                 g2d.setColor(new Color(80, 80, 120));
-                g2d.drawRect(1, 1, 478, 498);
+                g2d.drawRect(1, 1, 598, 498);
                 
                 // Title bar
                 g2d.setColor(new Color(60, 60, 100, 100));
-                g2d.fillRect(0, 0, 480, 30);
+                g2d.fillRect(0, 0, 600, 30);
                 g2d.setStroke(new BasicStroke(1));
                 g2d.setColor(new Color(100, 100, 140));
-                g2d.drawLine(0, 30, 480, 30);
+                g2d.drawLine(0, 30, 600, 30);
             }
         };
         
         mainPanel.setLayout(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(35, 15, 15, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 15, 15, 15)); // Remove top border
         
         // Title panel with minimize button
         JPanel titlePanel = createTitlePanel();
+        titlePanel.setPreferredSize(new Dimension(600, 30)); // Ensure it covers the top bar
         
         // Content panel with grid layout
         JPanel contentPanel = new JPanel(new GridBagLayout());
         contentPanel.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.insets = new Insets(8, 12, 8, 12);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
-        // Pet Management Section
-        addSection(contentPanel, gbc, 0, "Pet Management");
+        // Language Section
+        languageSectionLabel = addSection(contentPanel, gbc, 0, getText("language"));
         
         gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 1;
-        JButton duplicateBtn = createButton("Duplicate Pet");
+        englishBtn = createButton(getText("english"));
+        englishBtn.setEnabled(isChinese); // Only enable if not already English
+        if (!isChinese) {
+            englishBtn.setBackground(new Color(100, 100, 120));
+        }
+        englishBtn.addActionListener(e -> {
+            System.out.println("English button clicked. Current isChinese: " + isChinese);
+            if (isChinese) {
+                isChinese = false;
+                System.out.println("Switching to English. New isChinese: " + isChinese);
+                refreshSettingsWindow();
+            }
+        });
+        contentPanel.add(englishBtn, gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 1;
+        chineseBtn = createButton(getText("chinese"));
+        chineseBtn.setEnabled(!isChinese); // Only enable if not already Chinese
+        if (isChinese) {
+            chineseBtn.setBackground(new Color(100, 100, 120));
+        }
+        chineseBtn.addActionListener(e -> {
+            System.out.println("Chinese button clicked. Current isChinese: " + isChinese);
+            if (!isChinese) {
+                isChinese = true;
+                System.out.println("Switching to Chinese. New isChinese: " + isChinese);
+                refreshSettingsWindow();
+            }
+        });
+        contentPanel.add(chineseBtn, gbc);
+        
+        // Pet Management Section
+        petManagementSectionLabel = addSection(contentPanel, gbc, 2, getText("pet_management"));
+        
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 1;
+        duplicateBtn = createButton(getText("duplicate_pet"));
         duplicateBtn.addActionListener(e -> duplicatePet());
         contentPanel.add(duplicateBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 1;
-        JButton removeBtn = createButton("Remove Pet");
+        gbc.gridx = 1; gbc.gridy = 3;
+        removeBtn = createButton(getText("remove_pet"));
         removeBtn.addActionListener(e -> removePet());
         contentPanel.add(removeBtn, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
-        JLabel petCountLabel = createLabel("Active Pets: " + allPets.size());
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
+        petCountLabel = createLabel(getText("active_pets") + ": " + allPets.size());
         contentPanel.add(petCountLabel, gbc);
         
         // Transparency Section
-        addSection(contentPanel, gbc, 3, "Transparency");
+        transparencySectionLabel = addSection(contentPanel, gbc, 5, getText("transparency"));
         
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
         JSlider transparencySlider = createSlider(0, 100, (int)(transparency * 100));
+        transparencySlider.setPreferredSize(new Dimension(350, 40));
         transparencySlider.addChangeListener(e -> {
             transparency = transparencySlider.getValue() / 100.0f;
             updateTransparency();
         });
         contentPanel.add(transparencySlider, gbc);
+        gbc.weightx = 0;
         
-        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 1;
-        JButton hideBtn = createButton("Hide Pet");
+        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 1;
+        hideBtn = createButton(getText("hide_pet"));
         hideBtn.addActionListener(e -> {
             setVisible(false);
             settingsWindow.setVisible(false);
         });
         contentPanel.add(hideBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 5;
-        JButton showBtn = createButton("Show All Pets");
+        gbc.gridx = 1; gbc.gridy = 7;
+        showBtn = createButton(getText("show_all_pets"));
         showBtn.addActionListener(e -> showAllPets());
         contentPanel.add(showBtn, gbc);
         
         // Size Section
-        addSection(contentPanel, gbc, 6, "Size");
+        sizeSectionLabel = addSection(contentPanel, gbc, 8, getText("size"));
         
-        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 9; gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
         JSlider zoomSlider = createSlider(50, 300, (int)((petWidth / (double)DEFAULT_WIDTH) * 100));
+        zoomSlider.setPreferredSize(new Dimension(350, 40));
         zoomSlider.addChangeListener(e -> {
             int zoomPercent = zoomSlider.getValue();
             updateSize(zoomPercent);
         });
         contentPanel.add(zoomSlider, gbc);
+        gbc.weightx = 0;
         
-        gbc.gridx = 0; gbc.gridy = 8; gbc.gridwidth = 1;
-        JButton zoomInBtn = createButton("Zoom In");
+        gbc.gridx = 0; gbc.gridy = 10; gbc.gridwidth = 1;
+        zoomInBtn = createButton(getText("zoom_in"));
         zoomInBtn.addActionListener(e -> {
             int currentZoom = (int)((petWidth / (double)DEFAULT_WIDTH) * 100);
             int newZoom = Math.min(300, currentZoom + 25);
@@ -1593,8 +2493,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         });
         contentPanel.add(zoomInBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 8;
-        JButton zoomOutBtn = createButton("Zoom Out");
+        gbc.gridx = 1; gbc.gridy = 10;
+        zoomOutBtn = createButton(getText("zoom_out"));
         zoomOutBtn.addActionListener(e -> {
             int currentZoom = (int)((petWidth / (double)DEFAULT_WIDTH) * 100);
             int newZoom = Math.max(50, currentZoom - 25);
@@ -1603,60 +2503,102 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         contentPanel.add(zoomOutBtn, gbc);
         
         // Movement Section
-        addSection(contentPanel, gbc, 9, "Movement Settings");
+        movementSectionLabel = addSection(contentPanel, gbc, 11, getText("movement_settings"));
         
-        gbc.gridx = 0; gbc.gridy = 10; gbc.gridwidth = 1;
-        JCheckBox crossScreenBox = createCheckBox("Allow Cross-Screen Movement", allowCrossScreen);
+        gbc.gridx = 0; gbc.gridy = 12; gbc.gridwidth = 1;
+        crossScreenBox = createCheckBox(getText("allow_cross_screen"), allowCrossScreen);
         crossScreenBox.addActionListener(e -> allowCrossScreen = crossScreenBox.isSelected());
         contentPanel.add(crossScreenBox, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 10;
-        JButton testCrossScreenBtn = createButton("Test Cross-Screen");
+        gbc.gridx = 1; gbc.gridy = 12;
+        testCrossScreenBtn = createButton(getText("test_cross_screen"));
         testCrossScreenBtn.addActionListener(e -> moveToRandomScreen());
         contentPanel.add(testCrossScreenBtn, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 11; gbc.gridwidth = 1;
-        JCheckBox soundBox = createCheckBox("Sound Enabled", soundEnabled);
-        soundBox.addActionListener(e -> soundEnabled = soundBox.isSelected());
-        contentPanel.add(soundBox, gbc);
+        gbc.gridx = 0; gbc.gridy = 13; gbc.gridwidth = 1;
+        musicBox = createCheckBox(getText("music_enabled"), musicEnabled);
+        musicBox.addActionListener(e -> {
+            setMusicEnabled(musicBox.isSelected());
+        });
+        contentPanel.add(musicBox, gbc);
         
         // Horror Section
-        addSection(contentPanel, gbc, 12, "Horror Mode");
+        horrorSectionLabel = addSection(contentPanel, gbc, 14, getText("horror_mode"));
         
-        gbc.gridx = 0; gbc.gridy = 13; gbc.gridwidth = 1;
-        JCheckBox enemyBox = createCheckBox("Enable Enemies", enemyEnabled);
+        gbc.gridx = 0; gbc.gridy = 15; gbc.gridwidth = 1;
+        enemyBox = createCheckBox(getText("enable_enemies"), enemyEnabled);
         enemyBox.addActionListener(e -> toggleEnemySystem(enemyBox.isSelected()));
         contentPanel.add(enemyBox, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 13;
-        JButton spawnEnemyBtn = createButton("Spawn Enemy Now");
+        gbc.gridx = 1; gbc.gridy = 15;
+        spawnEnemyBtn = createButton(getText("spawn_enemy_now"));
         spawnEnemyBtn.addActionListener(e -> {
             if (enemyEnabled) {
                 spawnEnemy();
             } else {
                 JOptionPane.showMessageDialog(settingsWindow, 
-                    "Please enable enemies first!", 
-                    "Enemies Disabled", 
+                    getText("enable_enemies") + " first!", 
+                    getText("enemies") + " Disabled", 
                     JOptionPane.WARNING_MESSAGE);
             }
         });
         contentPanel.add(spawnEnemyBtn, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 14; gbc.gridwidth = 2;
-        JLabel enemyInfoLabel = createLabel("Enemies: " + enemies.size() + " / " + maxEnemies + " active");
+        gbc.gridx = 0; gbc.gridy = 16; gbc.gridwidth = 2;
+        enemyInfoLabel = createLabel(getText("enemies") + ": " + enemies.size() + " / " + maxEnemies + " active");
         contentPanel.add(enemyInfoLabel, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 15; gbc.gridwidth = 1;
-        JButton clearEnemiesBtn = createButton("Clear All Enemies");
+        gbc.gridx = 0; gbc.gridy = 17; gbc.gridwidth = 2;
+        maxEnemiesLabel = createLabel(getText("max_enemies") + ": " + maxEnemies);
+        contentPanel.add(maxEnemiesLabel, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 18; gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
+        JSlider maxEnemiesSlider = createSlider(1, 10, maxEnemies);
+        maxEnemiesSlider.setPreferredSize(new Dimension(350, 40));
+        maxEnemiesSlider.addChangeListener(e -> {
+            maxEnemies = maxEnemiesSlider.getValue();
+            if (maxEnemiesLabel != null) {
+                maxEnemiesLabel.setText(getText("max_enemies") + ": " + maxEnemies);
+            }
+            if (enemyInfoLabel != null) {
+                enemyInfoLabel.setText(getText("enemies") + ": " + enemies.size() + " / " + maxEnemies + " active");
+            }
+        });
+        contentPanel.add(maxEnemiesSlider, gbc);
+        gbc.weightx = 0;
+        
+        gbc.gridx = 0; gbc.gridy = 19; gbc.gridwidth = 1;
+        clearEnemiesBtn = createButton(getText("clear_all_enemies"));
         clearEnemiesBtn.addActionListener(e -> stopEnemySystem());
         contentPanel.add(clearEnemiesBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 15;
-        JButton closeBtn = createButton("Close");
+        gbc.gridx = 1; gbc.gridy = 19;
+        forceCleanupBtn = createButton(getText("force_cleanup"));
+        forceCleanupBtn.addActionListener(e -> forceRemoveAllEnemies());
+        contentPanel.add(forceCleanupBtn, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 20; gbc.gridwidth = 1;
+        closeBtn = createButton(getText("close"));
         closeBtn.addActionListener(e -> {
             settingsWindow.setVisible(false);
         });
         contentPanel.add(closeBtn, gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 20;
+        exitBtn = createButton(getText("exit_program"));
+        exitBtn.setBackground(new Color(150, 50, 50)); // Red background for exit button
+        exitBtn.addActionListener(e -> {
+            int result = JOptionPane.showConfirmDialog(settingsWindow,
+                getText("confirm_exit"),
+                "Confirm Exit",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+            if (result == JOptionPane.YES_OPTION) {
+                System.exit(0);
+            }
+        });
+        contentPanel.add(exitBtn, gbc);
         
         // Add content to scroll pane for better layout
         JScrollPane scrollPane = new JScrollPane(contentPanel);
@@ -1677,7 +2619,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         // Update pet count
         Timer updateTimer = new Timer(1000, e -> {
-            petCountLabel.setText("Active Pets: " + allPets.size());
+            petCountLabel.setText(getText("active_pets") + ": " + allPets.size());
         });
         updateTimer.start();
         
@@ -1706,24 +2648,24 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 // Dark gradient background
                 GradientPaint bgGradient = new GradientPaint(0, 0, new Color(40, 40, 60), 
-                                                           480, 30, new Color(60, 40, 80));
+                                                           600, 30, new Color(60, 40, 80));
                 g2d.setPaint(bgGradient);
-                g2d.fillRect(0, 0, 480, 30);
+                g2d.fillRect(0, 0, 600, 30);
                 
                 // Border
                 g2d.setStroke(new BasicStroke(1));
                 g2d.setColor(new Color(100, 100, 120));
-                g2d.drawLine(0, 30, 480, 30);
+                g2d.drawLine(0, 30, 600, 30);
             }
         };
         titlePanel.setOpaque(false);
-        titlePanel.setPreferredSize(new Dimension(480, 30));
+        titlePanel.setPreferredSize(new Dimension(600, 30));
         titlePanel.setLayout(new BorderLayout());
         
         // Title text
-        JLabel titleLabel = new JLabel("Desktop Pet Settings");
+        JLabel titleLabel = new JLabel(getText("settings_title"));
         titleLabel.setForeground(Color.WHITE);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 14));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 5));
         titlePanel.add(titleLabel, BorderLayout.CENTER);
         
@@ -1731,63 +2673,137 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         buttonPanel.setOpaque(false);
         
-        // Maximize button
-        JButton maximizeBtn = new JButton("□");
-        maximizeBtn.setForeground(Color.WHITE);
-        maximizeBtn.setBackground(new Color(0, 0, 0, 0));
-        maximizeBtn.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
-        maximizeBtn.setFont(new Font("Arial", Font.BOLD, 14));
-        maximizeBtn.setFocusPainted(false);
-        maximizeBtn.addActionListener(e -> {
-            if (settingsWindow.isVisible()) {
-                settingsWindow.setVisible(false);
-            } else {
-                settingsWindow.setVisible(true);
-                settingsWindow.toFront();
-            }
-        });
-        maximizeBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                maximizeBtn.setBackground(new Color(100, 100, 100, 100));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                maximizeBtn.setBackground(new Color(0, 0, 0, 0));
-            }
-        });
+        // Close button
+        JButton closeBtn = createCloseButton();
+        closeBtn.addActionListener(e -> settingsWindow.setVisible(false));
         
         // Minimize button
-        JButton minimizeBtn = new JButton("−");
-        minimizeBtn.setForeground(Color.WHITE);
-        minimizeBtn.setBackground(new Color(0, 0, 0, 0));
-        minimizeBtn.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
-        minimizeBtn.setFont(new Font("Arial", Font.BOLD, 16));
-        minimizeBtn.setFocusPainted(false);
+        JButton minimizeBtn = createMinimizeButton();
         minimizeBtn.addActionListener(e -> settingsWindow.setVisible(false));
-        minimizeBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                minimizeBtn.setBackground(new Color(100, 100, 100, 100));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                minimizeBtn.setBackground(new Color(0, 0, 0, 0));
-            }
-        });
         
-        buttonPanel.add(maximizeBtn);
         buttonPanel.add(minimizeBtn);
+        buttonPanel.add(closeBtn);
         titlePanel.add(buttonPanel, BorderLayout.EAST);
         
         return titlePanel;
+    }
+    
+    private JButton createIconButton(String icon, String tooltip) {
+        JButton button = new JButton(icon);
+        button.setForeground(Color.WHITE);
+        button.setBackground(new Color(0, 0, 0, 0));
+        button.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+        button.setFont(new Font("Microsoft YaHei", Font.BOLD, 14));
+        button.setFocusPainted(false);
+        button.setToolTipText(tooltip);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(new Color(100, 100, 100, 100));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(new Color(0, 0, 0, 0));
+            }
+        });
+        
+        return button;
+    }
+    
+    private JButton createCloseButton() {
+        JButton button = new JButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Draw close icon (X)
+                g2d.setColor(Color.WHITE);
+                g2d.setStroke(new BasicStroke(2));
+                
+                int size = Math.min(getWidth(), getHeight()) - 8;
+                int x = (getWidth() - size) / 2;
+                int y = (getHeight() - size) / 2;
+                
+                // Draw X lines
+                g2d.drawLine(x, y, x + size, y + size);
+                g2d.drawLine(x + size, y, x, y + size);
+            }
+        };
+        
+        button.setPreferredSize(new Dimension(30, 30));
+        button.setBackground(new Color(0, 0, 0, 0));
+        button.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+        button.setFocusPainted(false);
+        button.setToolTipText("Close window");
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(new Color(255, 0, 0, 100)); // Red background on hover
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(new Color(0, 0, 0, 0));
+            }
+        });
+        
+        return button;
+    }
+    
+    private JButton createMinimizeButton() {
+        JButton button = new JButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Draw minimize icon (horizontal line)
+                g2d.setColor(Color.WHITE);
+                g2d.setStroke(new BasicStroke(2));
+                
+                int width = getWidth() - 16;
+                int height = 2;
+                int x = (getWidth() - width) / 2;
+                int y = (getHeight() - height) / 2;
+                
+                // Draw horizontal line
+                g2d.drawLine(x, y, x + width, y);
+            }
+        };
+        
+        button.setPreferredSize(new Dimension(30, 30));
+        button.setBackground(new Color(0, 0, 0, 0));
+        button.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+        button.setFocusPainted(false);
+        button.setToolTipText("Minimize window");
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(new Color(100, 100, 100, 100)); // Gray background on hover
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(new Color(0, 0, 0, 0));
+            }
+        });
+        
+        return button;
     }
     
     private JButton createButton(String text) {
         JButton button = new JButton(text);
         button.setForeground(Color.WHITE);
         button.setBackground(new Color(70, 70, 90));
-        button.setFont(new Font("Arial", Font.PLAIN, 12));
+        // Use a font that supports both English and Chinese characters
+        button.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
         button.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         button.setFocusPainted(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -1809,7 +2825,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private JLabel createLabel(String text) {
         JLabel label = new JLabel(text);
         label.setForeground(Color.WHITE);
-        label.setFont(new Font("Arial", Font.PLAIN, 12));
+        // Use a font that supports both English and Chinese characters
+        label.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
         label.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         return label;
     }
@@ -1821,16 +2838,30 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         slider.setMinorTickSpacing(5);
         slider.setPaintTicks(true);
         slider.setPaintLabels(true);
-        slider.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        slider.setBorder(BorderFactory.createEmptyBorder(5, 15, 15, 15));
         slider.setFocusable(false);
         slider.setForeground(Color.WHITE);
+        
+        // Set custom label font for better readability
+        slider.setFont(new Font("Microsoft YaHei", Font.PLAIN, 11));
+        
+        // Create custom label table for better spacing
+        Dictionary<Integer, JLabel> labelTable = new Hashtable<>();
+        for (int i = min; i <= max; i += 25) {
+            JLabel label = new JLabel(String.valueOf(i));
+            label.setForeground(Color.WHITE);
+            label.setFont(new Font("Microsoft YaHei", Font.PLAIN, 11));
+            labelTable.put(i, label);
+        }
+        slider.setLabelTable(labelTable);
+        
         return slider;
     }
     
     private JCheckBox createCheckBox(String text, boolean selected) {
         JCheckBox checkBox = new JCheckBox(text);
         checkBox.setForeground(Color.WHITE);
-        checkBox.setFont(new Font("Arial", Font.PLAIN, 12));
+        checkBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
         checkBox.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         checkBox.setOpaque(false);
         checkBox.setFocusable(false);
@@ -1838,12 +2869,13 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         return checkBox;
     }
     
-    private void addSection(JPanel panel, GridBagConstraints gbc, int y, String title) {
+    private JLabel addSection(JPanel panel, GridBagConstraints gbc, int y, String title) {
         gbc.gridx = 0; gbc.gridy = y; gbc.gridwidth = 2;
         JLabel sectionTitle = createLabel(title);
-        sectionTitle.setFont(new Font("Arial", Font.BOLD, 14));
+        sectionTitle.setFont(new Font("Microsoft YaHei", Font.BOLD, 14));
         sectionTitle.setForeground(new Color(200, 200, 255)); // Slightly highlighted
         panel.add(sectionTitle, gbc);
+        return sectionTitle;
     }
     
     private JPanel createCyberpunkTitlePanel() {
@@ -1867,7 +2899,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 // Title text
                 g2d.setColor(Color.WHITE);
-                g2d.setFont(new Font("Arial", Font.BOLD, 20));
+                g2d.setFont(new Font("Microsoft YaHei", Font.BOLD, 20));
                 FontMetrics fm = g2d.getFontMetrics();
                 String title = "◤ CYBER PET CONTROL ◥";
                 int x = (500 - fm.stringWidth(title)) / 2;
@@ -1883,7 +2915,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private JButton createCyberpunkButton(String text, Color neonColor) {
         JButton button = new JButton(text);
         button.setForeground(neonColor);
-        button.setFont(new Font("Arial", Font.BOLD, 14));
+        button.setFont(new Font("Microsoft YaHei", Font.BOLD, 14));
         button.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         button.setOpaque(false);
         button.setFocusPainted(false);
@@ -1906,7 +2938,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private JLabel createCyberpunkLabel(String text) {
         JLabel label = new JLabel(text);
         label.setForeground(Color.WHITE);
-        label.setFont(new Font("Arial", Font.BOLD, 14));
+        label.setFont(new Font("Microsoft YaHei", Font.BOLD, 14));
         label.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         label.setOpaque(false);
         return label;
@@ -1927,7 +2959,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private JCheckBox createCyberpunkCheckBox(String text, boolean selected) {
         JCheckBox checkBox = new JCheckBox(text);
         checkBox.setForeground(Color.WHITE);
-        checkBox.setFont(new Font("Arial", Font.BOLD, 14));
+        checkBox.setFont(new Font("Microsoft YaHei", Font.BOLD, 14));
         checkBox.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         checkBox.setOpaque(false);
         checkBox.setFocusable(false);
@@ -2022,6 +3054,30 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             new AdvancedDesktopPet();
         });
     }
+
+    @Override
+    public void setLocation(int x, int y) {
+        // Temporarily disable boundary checking to see if that's the issue
+        super.setLocation(x, y);
+        
+        // Uncomment this to re-enable boundary checking:
+        /*
+        Point requested = new Point(x, y);
+        Point safe = ensurePetFullyVisible(requested);
+        
+        // Only log if the position was actually changed
+        if (!safe.equals(requested)) {
+            System.out.println("setLocation clamped from (" + x + ", " + y + ") to (" + safe.x + ", " + safe.y + ")");
+        }
+        
+        super.setLocation(safe.x, safe.y);
+        */
+    }
+
+    @Override
+    public void setLocation(Point p) {
+        setLocation(p.x, p.y);
+    }
 }
 
 // Enemy class that follows the pet
@@ -2033,16 +3089,24 @@ class EnemyWindow extends JWindow {
     private AdvancedDesktopPet targetPet;
     private Random random = new Random();
     private boolean isVisible = true;
-    private int enemyWidth = 100;
-    private int enemyHeight = 100;
+    private int enemyWidth;
+    private int enemyHeight;
+    private float enemyTransparency = 1.0f;
     private ImageIcon currentEnemyImage;
     private List<ImageIcon> enemyImages;
     private int flickerCount = 0;
     private int currentAnimationFrame = 0;
+    private boolean enemyFacingRight = true; // Track enemy facing direction
+    private Point lastLocation = null; // Track last position for direction calculation
     
     public EnemyWindow(AdvancedDesktopPet pet, List<ImageIcon> images) {
         this.targetPet = pet;
         this.enemyImages = images;
+        
+        // Get size and transparency from target pet
+        this.enemyWidth = pet.petWidth;
+        this.enemyHeight = pet.petHeight;
+        this.enemyTransparency = pet.transparency;
         
         initializeEnemy();
         startFollowing();
@@ -2055,15 +3119,27 @@ class EnemyWindow extends JWindow {
         setSize(enemyWidth, enemyHeight);
         setBackground(new Color(0, 0, 0, 0));
         
+        // Apply transparency
+        updateEnemyTransparency();
+        
         enemyLabel = new JLabel();
         enemyLabel.setHorizontalAlignment(JLabel.CENTER);
         enemyLabel.setVerticalAlignment(JLabel.CENTER);
         add(enemyLabel);
         
-        // Load random enemy image
+        // Load random enemy image and scale it to match enemy size
         if (!enemyImages.isEmpty()) {
-            currentEnemyImage = enemyImages.get(random.nextInt(enemyImages.size()));
-            enemyLabel.setIcon(currentEnemyImage);
+            try {
+                ImageIcon originalImage = enemyImages.get(random.nextInt(enemyImages.size()));
+                if (originalImage != null && originalImage.getImage() != null) {
+                    Image scaledImage = originalImage.getImage().getScaledInstance(
+                        enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                    currentEnemyImage = new ImageIcon(scaledImage);
+                    enemyLabel.setIcon(getFlippedEnemyIcon(currentEnemyImage));
+                }
+            } catch (Exception e) {
+                System.out.println("Error loading initial enemy image: " + e.getMessage());
+            }
         }
         
         // Start at a random position near the pet
@@ -2073,6 +3149,20 @@ class EnemyWindow extends JWindow {
         setLocation(petLocation.x + offsetX, petLocation.y + offsetY);
         
         setVisible(true);
+        
+        // Add window listener for proper cleanup
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                System.out.println("Enemy window closing: " + EnemyWindow.this.hashCode());
+                stopEnemy();
+            }
+            
+            @Override
+            public void windowClosed(WindowEvent e) {
+                System.out.println("Enemy window closed: " + EnemyWindow.this.hashCode());
+            }
+        });
     }
     
     private void startFollowing() {
@@ -2093,12 +3183,21 @@ class EnemyWindow extends JWindow {
         if (enemyImages.size() > 1) {
             // Create animation timer to cycle through enemy frames
             animationTimer = new Timer(500 + random.nextInt(1000), e -> {
+                try {
                 currentAnimationFrame = (currentAnimationFrame + 1) % enemyImages.size();
-                currentEnemyImage = enemyImages.get(currentAnimationFrame);
-                enemyLabel.setIcon(currentEnemyImage);
+                    ImageIcon originalImage = enemyImages.get(currentAnimationFrame);
+                    if (originalImage != null && originalImage.getImage() != null) {
+                        Image scaledImage = originalImage.getImage().getScaledInstance(
+                            enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                        currentEnemyImage = new ImageIcon(scaledImage);
+                        enemyLabel.setIcon(getFlippedEnemyIcon(currentEnemyImage));
+                    }
                 
                 // Randomize next animation frame timing for creepy effect
                 animationTimer.setDelay(300 + random.nextInt(1200));
+                } catch (Exception ex) {
+                    System.out.println("Error in enemy animation: " + ex.getMessage());
+                }
             });
             animationTimer.start();
         }
@@ -2107,6 +3206,7 @@ class EnemyWindow extends JWindow {
     private void followPet() {
         if (targetPet == null) return;
         
+        try {
         Point petLocation = targetPet.getLocation();
         Point currentLocation = getLocation();
         
@@ -2120,14 +3220,23 @@ class EnemyWindow extends JWindow {
             int stepSize = 2 + random.nextInt(3); // Random step size for creepy movement
             int dx = petLocation.x - currentLocation.x;
             int dy = petLocation.y - currentLocation.y;
+                
+                System.out.println("Enemy following pet - dx: " + dx + ", enemy to " + (dx > 0 ? "LEFT" : "RIGHT") + " of pet, should face: " + (dx > 0 ? "RIGHT" : "LEFT") + ", current facing: " + (enemyFacingRight ? "RIGHT" : "LEFT"));
             
             // Normalize movement
             if (Math.abs(dx) > stepSize) dx = dx > 0 ? stepSize : -stepSize;
             if (Math.abs(dy) > stepSize) dy = dy > 0 ? stepSize : -stepSize;
             
             // Add some randomness to movement for creepy effect
-            dx += random.nextInt(3) - 1;
-            dy += random.nextInt(3) - 1;
+                int randomX = random.nextInt(3) - 1;
+                int randomY = random.nextInt(3) - 1;
+                dx += randomX;
+                dy += randomY;
+                
+                // Update enemy direction based on position relative to pet
+                // If enemy is to the left of pet (dx > 0), enemy should face right
+                // If enemy is to the right of pet (dx < 0), enemy should face left
+                updateEnemyDirection(dx > 0 ? -1 : 1);
             
             setLocation(currentLocation.x + dx, currentLocation.y + dy);
         } else {
@@ -2140,7 +3249,16 @@ class EnemyWindow extends JWindow {
                 int escapeX = random.nextInt(6) - 3;
                 int escapeY = random.nextInt(6) - 3;
                 setLocation(currentLocation.x + escapeX, currentLocation.y + escapeY);
+                    
+                    // Update direction for escape movement
+                    updateEnemyDirection(escapeX > 0 ? 1 : -1);
+                }
             }
+            
+            // Update last location for next frame
+            lastLocation = new Point(currentLocation);
+        } catch (Exception e) {
+            System.out.println("Error in enemy followPet: " + e.getMessage());
         }
     }
     
@@ -2217,14 +3335,27 @@ class EnemyWindow extends JWindow {
     }
     
     private void changeEnemyImage() {
-        if (enemyImages.size() > 1) {
-            ImageIcon newImage;
+        if (enemyImages.size() > 1 && currentEnemyImage != null) {
+            ImageIcon originalImage;
+            int attempts = 0;
             do {
-                newImage = enemyImages.get(random.nextInt(enemyImages.size()));
-            } while (newImage == currentEnemyImage);
+                originalImage = enemyImages.get(random.nextInt(enemyImages.size()));
+                attempts++;
+                // Prevent infinite loop
+                if (attempts > 10) break;
+            } while (originalImage != null && currentEnemyImage != null && 
+                     originalImage.getImage().equals(currentEnemyImage.getImage()));
             
-            currentEnemyImage = newImage;
-            enemyLabel.setIcon(currentEnemyImage);
+            if (originalImage != null) {
+                try {
+                    Image scaledImage = originalImage.getImage().getScaledInstance(
+                        enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                    currentEnemyImage = new ImageIcon(scaledImage);
+                    enemyLabel.setIcon(getFlippedEnemyIcon(currentEnemyImage));
+                } catch (Exception e) {
+                    System.out.println("Error scaling enemy image: " + e.getMessage());
+                }
+            }
         }
     }
     
@@ -2242,9 +3373,18 @@ class EnemyWindow extends JWindow {
                     rapidCount++;
                     
                     // Rapidly cycle through all frames
+                    try {
                     int frameIndex = rapidCount % enemyImages.size();
-                    currentEnemyImage = enemyImages.get(frameIndex);
-                    enemyLabel.setIcon(currentEnemyImage);
+                        ImageIcon originalImage = enemyImages.get(frameIndex);
+                        if (originalImage != null && originalImage.getImage() != null) {
+                            Image scaledImage = originalImage.getImage().getScaledInstance(
+                                enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                            currentEnemyImage = new ImageIcon(scaledImage);
+                            enemyLabel.setIcon(getFlippedEnemyIcon(currentEnemyImage));
+                        }
+                    } catch (Exception ex) {
+                        System.out.println("Error in rapid animation: " + ex.getMessage());
+                    }
                     
                     // Stop after 15 rapid cycles
                     if (rapidCount >= 15) {
@@ -2262,9 +3402,137 @@ class EnemyWindow extends JWindow {
     }
     
     public void stopEnemy() {
-        if (followTimer != null) followTimer.stop();
-        if (horrorEffectTimer != null) horrorEffectTimer.stop();
-        if (animationTimer != null) animationTimer.stop();
+        System.out.println("Stopping enemy: " + this.hashCode());
+        
+        try {
+            // Stop all timers first
+            stopAllTimers();
+            
+            // Hide and dispose the window
+            setVisible(false);
         dispose();
+            
+            System.out.println("Enemy stopped successfully: " + this.hashCode());
+            
+        } catch (Exception e) {
+            System.out.println("Error stopping enemy: " + e.getMessage());
+            // Try to force dispose even if there's an error
+            try {
+                setVisible(false);
+                dispose();
+            } catch (Exception ex) {
+                System.out.println("Error force disposing enemy: " + ex.getMessage());
+            }
+        }
+    }
+    
+    // Public method to stop all timers
+    public void stopAllTimers() {
+        if (followTimer != null) {
+            followTimer.stop();
+            followTimer = null;
+        }
+        if (horrorEffectTimer != null) {
+            horrorEffectTimer.stop();
+            horrorEffectTimer = null;
+        }
+        if (animationTimer != null) {
+            animationTimer.stop();
+            animationTimer = null;
+        }
+    }
+    
+    // Public method to check if timers are null (for stuck detection)
+    public boolean hasNullTimers() {
+        return followTimer == null && horrorEffectTimer == null && animationTimer == null;
+    }
+    
+    // Update enemy transparency
+    private void updateEnemyTransparency() {
+        if (enemyTransparency <= 0.1f) {
+            setVisible(false);
+        } else {
+            setVisible(true);
+            try {
+                setOpacity(enemyTransparency);
+            } catch (Exception e) {
+                // Fallback for systems that don't support opacity
+                System.out.println("Enemy transparency not supported on this system");
+            }
+        }
+    }
+    
+    // Update enemy size and transparency from pet settings
+    public void updateFromPetSettings() {
+        if (targetPet != null) {
+            // Update size
+            enemyWidth = targetPet.petWidth;
+            enemyHeight = targetPet.petHeight;
+            setSize(enemyWidth, enemyHeight);
+            
+            System.out.println("Enemy size updated to: " + enemyWidth + "x" + enemyHeight + 
+                             " (Pet size: " + targetPet.petWidth + "x" + targetPet.petHeight + ")");
+            
+            // Scale the current enemy image to match the new size
+            if (currentEnemyImage != null && currentEnemyImage.getImage() != null) {
+                try {
+                    Image scaledImage = currentEnemyImage.getImage().getScaledInstance(
+                        enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                    currentEnemyImage = new ImageIcon(scaledImage);
+                    enemyLabel.setIcon(getFlippedEnemyIcon(currentEnemyImage));
+                } catch (Exception e) {
+                    System.out.println("Error scaling enemy image in update: " + e.getMessage());
+                }
+            }
+            
+            // Update transparency
+            enemyTransparency = targetPet.transparency;
+            updateEnemyTransparency();
+        }
+    }
+    
+    // Flip enemy image based on facing direction
+    private ImageIcon getFlippedEnemyIcon(ImageIcon original) {
+        if (enemyFacingRight || original == null) {
+            return original; // Return original if facing right or null
+        }
+        
+        // Flip the image horizontally for left-facing direction
+        try {
+            Image img = original.getImage();
+            BufferedImage flipped = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2d = flipped.createGraphics();
+            
+            // Apply horizontal flip transformation
+            g2d.drawImage(img, img.getWidth(null), 0, -img.getWidth(null), img.getHeight(null), null);
+            g2d.dispose();
+            
+            return new ImageIcon(flipped);
+        } catch (Exception e) {
+            System.out.println("Error flipping enemy image: " + e.getMessage());
+            return original;
+        }
+    }
+    
+    // Update enemy direction based on movement
+    private void updateEnemyDirection(int dx) {
+        if (dx > 0 && !enemyFacingRight) {
+            // Moving right, should face right
+            enemyFacingRight = true;
+            updateEnemySprite();
+            System.out.println("Enemy now facing RIGHT (dx: " + dx + ")");
+        } else if (dx < 0 && enemyFacingRight) {
+            // Moving left, should face left
+            enemyFacingRight = false;
+            updateEnemySprite();
+            System.out.println("Enemy now facing LEFT (dx: " + dx + ")");
+        }
+    }
+    
+    // Update enemy sprite with correct direction
+    private void updateEnemySprite() {
+        if (currentEnemyImage != null) {
+            enemyLabel.setIcon(getFlippedEnemyIcon(currentEnemyImage));
+        }
     }
 } 
