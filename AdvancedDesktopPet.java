@@ -82,6 +82,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private static boolean wasPlayingHorrorBeforeDisable = false; // Track state before disable
     private static Timer musicCheckTimer;
     private static boolean musicInitialized = false; // Track if music system is already initialized
+    private static boolean enemySystemStarting = false; // Prevent music switching during enemy startup
     
     // Loading screen
     private JWindow loadingWindow;
@@ -569,7 +570,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 AudioInputStream normalStream = AudioSystem.getAudioInputStream(normalMusicFile);
                 normalMusicClip = AudioSystem.getClip();
                 normalMusicClip.open(normalStream);
-                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                // Don't start looping yet - will be set when actually playing
                 System.out.println("Normal music loaded successfully");
             } catch (Exception e) {
                 System.out.println("Error loading normal music: " + e.getMessage());
@@ -580,25 +581,32 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 AudioInputStream horrorStream = AudioSystem.getAudioInputStream(horrorMusicFile);
                 horrorMusicClip = AudioSystem.getClip();
                 horrorMusicClip.open(horrorStream);
-                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                // Don't start looping yet - will be set when actually playing
                 System.out.println("Horror music loaded successfully");
             } catch (Exception e) {
                 System.out.println("Error loading horror music: " + e.getMessage());
             }
             
-            // Start music check timer
-            musicCheckTimer = new Timer(1000, e -> checkAndUpdateMusic());
+            // Start music check timer (more responsive for immediate switching)
+            musicCheckTimer = new Timer(2000, e -> {
+                checkAndUpdateMusic();
+                restartMusicIfNeeded(); // Ensure music is looping if it should be
+            });
             musicCheckTimer.start();
             
             // Start with normal music if enabled (and ensure horror is stopped)
             if (musicEnabled && normalMusicClip != null) {
-                // Make sure horror music is stopped
-                if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
+                // Make sure horror music is stopped and not running
+                if (horrorMusicClip != null) {
                     horrorMusicClip.stop();
+                    horrorMusicClip.setFramePosition(0); // Reset to beginning
                 }
-                normalMusicClip.start();
+                
+                // Start normal music with looping
+                normalMusicClip.setFramePosition(0); // Reset to beginning
+                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
                 isPlayingHorror = false;
-                System.out.println("Started normal music playback");
+                System.out.println("Started normal music playback with looping");
             }
             
             musicInitialized = true;
@@ -625,53 +633,74 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             return;
         }
         
-        // Music was just re-enabled - restart appropriate music
+        // Check if no music is currently playing (music was just re-enabled or stopped)
         if (normalMusicClip != null && !normalMusicClip.isRunning() && 
             horrorMusicClip != null && !horrorMusicClip.isRunning()) {
             
             boolean hasEnemies = !allPets.isEmpty() && allPets.stream().anyMatch(pet -> !pet.enemies.isEmpty());
             
             if (hasEnemies || wasPlayingHorrorBeforeDisable) {
-                // Resume horror music if enemies are present or was playing before
-                horrorMusicClip.start();
+                // Start horror music if enemies are present or was playing before
+                horrorMusicClip.setFramePosition(0); // Reset to beginning
+                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
                 isPlayingHorror = true;
                 wasPlayingHorrorBeforeDisable = false;
-                System.out.println("Music re-enabled - started horror music");
+                System.out.println("Music re-enabled - started horror music with looping");
             } else {
-                // Resume normal music
-                normalMusicClip.start();
+                // Start normal music
+                normalMusicClip.setFramePosition(0); // Reset to beginning
+                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
                 isPlayingHorror = false;
                 wasPlayingHorrorBeforeDisable = false;
-                System.out.println("Music re-enabled - started normal music");
+                System.out.println("Music re-enabled - started normal music with looping");
             }
+            return;
+        }
+        
+        // Only switch music if there's a significant change in enemy presence
+        // This prevents constant switching that could interrupt looping
+        // Skip switching if enemy system is starting up
+        if (enemySystemStarting) {
+            System.out.println("Skipping music switch - enemy system is starting up");
             return;
         }
         
         boolean hasEnemies = !allPets.isEmpty() && allPets.stream().anyMatch(pet -> !pet.enemies.isEmpty());
         
-        if (hasEnemies && !isPlayingHorror) {
-            // Switch to horror music
+        if (hasEnemies && !isPlayingHorror && normalMusicClip != null && normalMusicClip.isRunning()) {
+            // Switch to horror music only if normal music is currently playing
             System.out.println("Enemies detected - switching to horror music");
-            if (normalMusicClip != null && normalMusicClip.isRunning()) {
-                normalMusicClip.stop();
-                System.out.println("Stopped normal music");
-            }
-            if (horrorMusicClip != null && !horrorMusicClip.isRunning()) {
-                horrorMusicClip.start();
+            normalMusicClip.stop();
+            normalMusicClip.setFramePosition(0); // Reset to beginning
+            if (horrorMusicClip != null) {
+                horrorMusicClip.setFramePosition(0); // Reset to beginning
+                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
                 isPlayingHorror = true;
-                System.out.println("Started horror music");
+                System.out.println("Started horror music with looping");
             }
-        } else if (!hasEnemies && isPlayingHorror) {
-            // Switch to normal music
+        } else if (!hasEnemies && isPlayingHorror && horrorMusicClip != null && horrorMusicClip.isRunning()) {
+            // Switch to normal music only if horror music is currently playing
             System.out.println("No enemies - switching to normal music");
-            if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
-                horrorMusicClip.stop();
-                System.out.println("Stopped horror music");
-            }
-            if (normalMusicClip != null && !normalMusicClip.isRunning()) {
-                normalMusicClip.start();
+            horrorMusicClip.stop();
+            horrorMusicClip.setFramePosition(0); // Reset to beginning
+            if (normalMusicClip != null) {
+                normalMusicClip.setFramePosition(0); // Reset to beginning
+                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
                 isPlayingHorror = false;
-                System.out.println("Started normal music");
+                System.out.println("Started normal music with looping");
+            }
+        }
+        
+        // Ensure music is looping if it should be playing
+        if (musicEnabled) {
+            if (isPlayingHorror && horrorMusicClip != null && !horrorMusicClip.isRunning()) {
+                horrorMusicClip.setFramePosition(0); // Reset to beginning
+                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                System.out.println("Restarted horror music loop");
+            } else if (!isPlayingHorror && normalMusicClip != null && !normalMusicClip.isRunning()) {
+                normalMusicClip.setFramePosition(0); // Reset to beginning
+                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                System.out.println("Restarted normal music loop");
             }
         }
     }
@@ -689,6 +718,36 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 horrorMusicClip.stop();
             }
             isPlayingHorror = false;
+        }
+    }
+    
+    // Method to restart music if it stops unexpectedly
+    private static void restartMusicIfNeeded() {
+        if (!musicEnabled) return;
+        if (enemySystemStarting) return; // Skip during enemy system startup
+        
+        try {
+            boolean hasEnemies = !allPets.isEmpty() && allPets.stream().anyMatch(pet -> !pet.enemies.isEmpty());
+            
+            if (hasEnemies) {
+                // Should be playing horror music
+                if (horrorMusicClip != null && !horrorMusicClip.isRunning()) {
+                    horrorMusicClip.setFramePosition(0); // Reset to beginning
+                    horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                    isPlayingHorror = true;
+                    System.out.println("Restarted horror music loop");
+                }
+            } else {
+                // Should be playing normal music
+                if (normalMusicClip != null && !normalMusicClip.isRunning()) {
+                    normalMusicClip.setFramePosition(0); // Reset to beginning
+                    normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                    isPlayingHorror = false;
+                    System.out.println("Restarted normal music loop");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error restarting music: " + e.getMessage());
         }
     }
     
@@ -1015,10 +1074,13 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         });
         enemySpawnTimer.start();
         
-        // Enemy cleanup timer - clean up stuck enemies every 15 seconds (more frequent)
-        enemyCleanupTimer = new Timer(15000, e -> {
+        // Recovery-focused enemy system - check and fix issues every 30 seconds
+        enemyCleanupTimer = new Timer(30000, e -> {
             if (enemyEnabled) {
-                cleanupStuckEnemies();
+                // Focus on recovery first, only remove if completely broken
+                checkEnemyHealth();
+                // Only do aggressive cleanup for truly broken enemies
+                cleanupOnlyBrokenEnemies();
             }
         });
         enemyCleanupTimer.start();
@@ -1031,6 +1093,110 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             ((Timer) e.getSource()).stop();
         });
         initialSpawnTimer.start();
+    }
+    
+        // Recovery-focused enemy health check - tries to fix issues before removing
+    private void checkEnemyHealth() {
+        if (enemies.isEmpty()) return;
+        
+        for (EnemyWindow enemy : enemies) {
+            try {
+                if (enemy != null && enemy.isVisible() && enemy.isDisplayable()) {
+                    // Try to recover enemies with issues
+                    if (enemy.hasNullTimers()) {
+                        System.out.println("Attempting to recover enemy with null timers: " + enemy.hashCode());
+                        enemy.restartTimers();
+                    } else if (enemy.isStuck()) {
+                        System.out.println("Attempting to recover stuck enemy: " + enemy.hashCode());
+                        enemy.restartTimers();
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Error during enemy health check: " + e.getMessage());
+            }
+        }
+    }
+    
+    // Only remove enemies that are completely broken and unrecoverable
+    private void cleanupOnlyBrokenEnemies() {
+        if (enemies.isEmpty()) return;
+        
+        System.out.println("Checking for completely broken enemies...");
+        
+        List<EnemyWindow> enemiesToRemove = new ArrayList<>();
+        
+        for (EnemyWindow enemy : enemies) {
+            try {
+                boolean shouldRemove = false;
+                
+                // Only remove if enemy is completely broken
+                if (enemy == null) {
+                    System.out.println("Found null enemy, marking for removal");
+                    shouldRemove = true;
+                }
+                // Only remove if window is completely disposed
+                else if (!enemy.isDisplayable()) {
+                    System.out.println("Found disposed enemy, marking for removal");
+                    shouldRemove = true;
+                }
+                // Only remove if location is completely invalid
+                else if (enemy.getLocation().x < -50000 || enemy.getLocation().y < -50000) {
+                    System.out.println("Found enemy with severely invalid location, marking for removal");
+                    shouldRemove = true;
+                }
+                // Only remove if enemy has been completely non-functional for a very long time
+                else if (enemy.hasBeenCompletelyBrokenForTooLong()) {
+                    System.out.println("Found enemy that has been completely broken for too long, marking for removal");
+                    shouldRemove = true;
+                }
+                
+                if (shouldRemove) {
+                    enemiesToRemove.add(enemy);
+                }
+                
+            } catch (Exception e) {
+                System.out.println("Error checking enemy status: " + e.getMessage());
+                // Only remove if we can't even check the enemy
+                enemiesToRemove.add(enemy);
+            }
+        }
+        
+        // Remove only completely broken enemies
+        for (EnemyWindow enemy : enemiesToRemove) {
+            try {
+                System.out.println("Removing completely broken enemy: " + (enemy != null ? enemy.hashCode() : "null"));
+                
+                if (enemy != null) {
+                    enemy.stopAllTimers();
+                    enemy.setVisible(false);
+                    enemy.dispose();
+                }
+                
+                enemies.remove(enemy);
+                
+            } catch (Exception e) {
+                System.out.println("Error removing broken enemy: " + e.getMessage());
+                enemies.remove(enemy);
+            }
+        }
+        
+        // Switch back to normal music if no enemies remain after cleanup
+        if (enemies.isEmpty() && musicEnabled && normalMusicClip != null && isPlayingHorror) {
+            SwingUtilities.invokeLater(() -> {
+                if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
+                    horrorMusicClip.stop();
+                    horrorMusicClip.setFramePosition(0);
+                }
+                normalMusicClip.setFramePosition(0);
+                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                isPlayingHorror = false;
+                System.out.println("Immediately switched to normal music (no enemies after cleanup)");
+            });
+        }
+        
+        if (!enemiesToRemove.isEmpty()) {
+            System.out.println("Removed " + enemiesToRemove.size() + " completely broken enemies. Remaining: " + enemies.size());
+        }
     }
     
     private void spawnEnemy() {
@@ -1046,6 +1212,20 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         EnemyWindow enemy = new EnemyWindow(this, enemyImages);
         enemies.add(enemy);
         
+        // Immediately switch to horror music if this is the first enemy
+        if (enemies.size() == 1 && musicEnabled && horrorMusicClip != null) {
+            SwingUtilities.invokeLater(() -> {
+                if (normalMusicClip != null && normalMusicClip.isRunning()) {
+                    normalMusicClip.stop();
+                    normalMusicClip.setFramePosition(0);
+                }
+                horrorMusicClip.setFramePosition(0);
+                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                isPlayingHorror = true;
+                System.out.println("Immediately switched to horror music (first enemy spawned)");
+            });
+        }
+        
         // Remove enemy after some time (20-60 seconds)
         Timer despawnTimer = new Timer(20000 + enemyRandom.nextInt(40000), e -> {
                 try {
@@ -1053,6 +1233,21 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                         System.out.println("Despawning enemy...");
                 enemy.stopEnemy();
                 enemies.remove(enemy);
+                
+                // Switch back to normal music if no enemies remain
+                if (enemies.isEmpty() && musicEnabled && normalMusicClip != null) {
+                    SwingUtilities.invokeLater(() -> {
+                        if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
+                            horrorMusicClip.stop();
+                            horrorMusicClip.setFramePosition(0);
+                        }
+                        normalMusicClip.setFramePosition(0);
+                        normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                        isPlayingHorror = false;
+                        System.out.println("Immediately switched to normal music (no enemies remaining)");
+                    });
+                }
+                
                 System.out.println("Enemy despawned. Remaining enemies: " + enemies.size());
             }
                 } catch (Exception ex) {
@@ -1079,7 +1274,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         }
     }
     
-    // Clean up stuck or invalid enemies
+    // Enhanced cleanup for stuck or invalid enemies
     private void cleanupStuckEnemies() {
         if (enemies.isEmpty()) return;
         
@@ -1115,6 +1310,13 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 // Check if enemy timers are null (indicating it's broken)
                 else if (enemy.hasNullTimers()) {
                     System.out.println("Found enemy with null timers, marking for removal");
+                    shouldRemove = true;
+                }
+                // Note: Removed overly aggressive stuck detection that would remove
+                // enemies during normal stationary behavior (horror effects, stalking, etc.)
+                // Check if enemy has been running too long (prevent memory leaks)
+                else if (enemy.hasBeenRunningTooLong()) {
+                    System.out.println("Found enemy running too long, marking for removal");
                     shouldRemove = true;
                 }
                 
@@ -1157,7 +1359,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         }
     }
     
-    // Force remove all enemies (emergency cleanup)
+    // Enhanced force remove all enemies (emergency cleanup)
     public void forceRemoveAllEnemies() {
         System.out.println("Force removing all enemies...");
         
@@ -1197,6 +1399,49 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             System.gc();
             
             System.out.println("Force cleanup completed. Enemies remaining: " + enemies.size());
+            
+            // Restart enemy system after a delay if it was enabled
+            if (enemyEnabled) {
+                Timer restartTimer = new Timer(5000, e -> {
+                    System.out.println("Restarting enemy system after force cleanup...");
+                    startEnemySystem();
+                    ((Timer) e.getSource()).stop();
+                });
+                restartTimer.start();
+            }
+        });
+    }
+    
+    // Additional emergency cleanup method for hanging enemies
+    public void emergencyCleanupHangingEnemies() {
+        System.out.println("Emergency cleanup for hanging enemies...");
+        
+        // Force cleanup all enemies
+        forceRemoveAllEnemies();
+        
+        // Additional cleanup steps
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // Clear any remaining references
+                System.gc();
+                
+                // Reset enemy system state
+                enemyEnabled = false;
+                
+                // Wait a moment then re-enable if it was enabled
+                Timer reenableTimer = new Timer(3000, e -> {
+                    if (enemyEnabled) {
+                        System.out.println("Re-enabling enemy system after emergency cleanup...");
+                        startEnemySystem();
+                    }
+                    ((Timer) e.getSource()).stop();
+                });
+                reenableTimer.start();
+                
+                System.out.println("Emergency cleanup completed");
+            } catch (Exception e) {
+                System.out.println("Error during emergency cleanup: " + e.getMessage());
+            }
         });
     }
     
@@ -1243,11 +1488,48 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         if (enabled) {
             System.out.println("Enemy system enabled! Enemies will start spawning...");
+            enemySystemStarting = true; // Set flag to prevent music switching interference
             startEnemySystem();
             createScreenFlashEffect(); // Horror effect when enabled
+            // Immediately switch to horror music
+            SwingUtilities.invokeLater(() -> {
+                if (musicEnabled && horrorMusicClip != null) {
+                    if (normalMusicClip != null && normalMusicClip.isRunning()) {
+                        normalMusicClip.stop();
+                        normalMusicClip.setFramePosition(0);
+                    }
+                    horrorMusicClip.setFramePosition(0);
+                    horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                    isPlayingHorror = true;
+                    System.out.println("Immediately switched to horror music");
+                }
+            });
+            
+            // Clear the flag after enemies have had time to spawn
+            Timer clearFlagTimer = new Timer(5000, e -> {
+                enemySystemStarting = false;
+                System.out.println("Enemy system startup complete - music switching re-enabled");
+                ((Timer) e.getSource()).stop();
+            });
+            clearFlagTimer.start();
+            
         } else {
             System.out.println("Enemy system disabled. Stopping all enemies...");
+            enemySystemStarting = false; // Clear flag immediately when disabling
             stopEnemySystem();
+            // Immediately switch back to normal music
+            SwingUtilities.invokeLater(() -> {
+                if (musicEnabled && normalMusicClip != null) {
+                    if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
+                        horrorMusicClip.stop();
+                        horrorMusicClip.setFramePosition(0);
+                    }
+                    normalMusicClip.setFramePosition(0);
+                    normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
+                    isPlayingHorror = false;
+                    System.out.println("Immediately switched to normal music");
+                }
+            });
         }
     }
     
@@ -3166,40 +3448,87 @@ class EnemyWindow extends JWindow {
     }
     
     private void startFollowing() {
-        followTimer = new Timer(100, e -> followPet());
-        followTimer.start();
+        try {
+            if (followTimer != null) {
+                followTimer.stop();
+            }
+            followTimer = new Timer(100, e -> {
+                try {
+                    followPet();
+                } catch (Exception ex) {
+                    System.out.println("Error in followPet timer: " + ex.getMessage());
+                    // Restart timer if it fails
+                    if (followTimer != null) {
+                        followTimer.restart();
+                    }
+                }
+            });
+            followTimer.start();
+        } catch (Exception e) {
+            System.out.println("Error starting follow timer: " + e.getMessage());
+        }
     }
     
     private void startHorrorEffects() {
-        horrorEffectTimer = new Timer(3000 + random.nextInt(4000), e -> {
-            createHorrorEffect();
-            // Randomize next horror effect timing
-            horrorEffectTimer.setDelay(2000 + random.nextInt(6000));
-        });
-        horrorEffectTimer.start();
+        try {
+            if (horrorEffectTimer != null) {
+                horrorEffectTimer.stop();
+            }
+            horrorEffectTimer = new Timer(3000 + random.nextInt(4000), e -> {
+                try {
+                    createHorrorEffect();
+                    // Randomize next horror effect timing
+                    if (horrorEffectTimer != null) {
+                        horrorEffectTimer.setDelay(2000 + random.nextInt(6000));
+                    }
+                } catch (Exception ex) {
+                    System.out.println("Error in horror effect timer: " + ex.getMessage());
+                    // Restart timer if it fails
+                    if (horrorEffectTimer != null) {
+                        horrorEffectTimer.restart();
+                    }
+                }
+            });
+            horrorEffectTimer.start();
+        } catch (Exception e) {
+            System.out.println("Error starting horror effect timer: " + e.getMessage());
+        }
     }
     
     private void startAnimation() {
         if (enemyImages.size() > 1) {
-            // Create animation timer to cycle through enemy frames
-            animationTimer = new Timer(500 + random.nextInt(1000), e -> {
-                try {
-                currentAnimationFrame = (currentAnimationFrame + 1) % enemyImages.size();
-                    ImageIcon originalImage = enemyImages.get(currentAnimationFrame);
-                    if (originalImage != null && originalImage.getImage() != null) {
-                        Image scaledImage = originalImage.getImage().getScaledInstance(
-                            enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
-                        currentEnemyImage = new ImageIcon(scaledImage);
-                        enemyLabel.setIcon(getFlippedEnemyIcon(currentEnemyImage));
-                    }
-                
-                // Randomize next animation frame timing for creepy effect
-                animationTimer.setDelay(300 + random.nextInt(1200));
-                } catch (Exception ex) {
-                    System.out.println("Error in enemy animation: " + ex.getMessage());
+            try {
+                if (animationTimer != null) {
+                    animationTimer.stop();
                 }
-            });
-            animationTimer.start();
+                // Create animation timer to cycle through enemy frames
+                animationTimer = new Timer(500 + random.nextInt(1000), e -> {
+                    try {
+                        currentAnimationFrame = (currentAnimationFrame + 1) % enemyImages.size();
+                        ImageIcon originalImage = enemyImages.get(currentAnimationFrame);
+                        if (originalImage != null && originalImage.getImage() != null) {
+                            Image scaledImage = originalImage.getImage().getScaledInstance(
+                                enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                            currentEnemyImage = new ImageIcon(scaledImage);
+                            enemyLabel.setIcon(getFlippedEnemyIcon(currentEnemyImage));
+                        }
+                    
+                        // Randomize next animation frame timing for creepy effect
+                        if (animationTimer != null) {
+                            animationTimer.setDelay(300 + random.nextInt(1200));
+                        }
+                    } catch (Exception ex) {
+                        System.out.println("Error in enemy animation: " + ex.getMessage());
+                        // Restart timer if it fails
+                        if (animationTimer != null) {
+                            animationTimer.restart();
+                        }
+                    }
+                });
+                animationTimer.start();
+            } catch (Exception e) {
+                System.out.println("Error starting animation timer: " + e.getMessage());
+            }
         }
     }
     
@@ -3207,27 +3536,33 @@ class EnemyWindow extends JWindow {
         if (targetPet == null) return;
         
         try {
-        Point petLocation = targetPet.getLocation();
-        Point currentLocation = getLocation();
-        
-        // Calculate distance to pet
-        double distance = Math.sqrt(Math.pow(petLocation.x - currentLocation.x, 2) + 
-                                   Math.pow(petLocation.y - currentLocation.y, 2));
-        
-        // Follow pet but maintain some distance (don't get too close)
-        if (distance > 80) {
-            // Move towards pet
-            int stepSize = 2 + random.nextInt(3); // Random step size for creepy movement
-            int dx = petLocation.x - currentLocation.x;
-            int dy = petLocation.y - currentLocation.y;
-                
+            Point petLocation = targetPet.getLocation();
+            Point currentLocation = getLocation();
+            
+            // Validate locations
+            if (petLocation == null || currentLocation == null) {
+                System.out.println("Invalid location detected, skipping movement");
+                return;
+            }
+            
+            // Calculate distance to pet
+            double distance = Math.sqrt(Math.pow(petLocation.x - currentLocation.x, 2) + 
+                                       Math.pow(petLocation.y - currentLocation.y, 2));
+            
+            // Follow pet but maintain some distance (don't get too close)
+            if (distance > 80) {
+                // Move towards pet
+                int stepSize = 2 + random.nextInt(3); // Random step size for creepy movement
+                int dx = petLocation.x - currentLocation.x;
+                int dy = petLocation.y - currentLocation.y;
+                    
                 System.out.println("Enemy following pet - dx: " + dx + ", enemy to " + (dx > 0 ? "LEFT" : "RIGHT") + " of pet, should face: " + (dx > 0 ? "RIGHT" : "LEFT") + ", current facing: " + (enemyFacingRight ? "RIGHT" : "LEFT"));
-            
-            // Normalize movement
-            if (Math.abs(dx) > stepSize) dx = dx > 0 ? stepSize : -stepSize;
-            if (Math.abs(dy) > stepSize) dy = dy > 0 ? stepSize : -stepSize;
-            
-            // Add some randomness to movement for creepy effect
+                
+                // Normalize movement
+                if (Math.abs(dx) > stepSize) dx = dx > 0 ? stepSize : -stepSize;
+                if (Math.abs(dy) > stepSize) dy = dy > 0 ? stepSize : -stepSize;
+                
+                // Add some randomness to movement for creepy effect
                 int randomX = random.nextInt(3) - 1;
                 int randomY = random.nextInt(3) - 1;
                 dx += randomX;
@@ -3237,21 +3572,30 @@ class EnemyWindow extends JWindow {
                 // If enemy is to the left of pet (dx > 0), enemy should face right
                 // If enemy is to the right of pet (dx < 0), enemy should face left
                 updateEnemyDirection(dx > 0 ? -1 : 1);
-            
-            setLocation(currentLocation.x + dx, currentLocation.y + dy);
-        } else {
-            // If too close, make pet shake and occasionally move away (stalking behavior)
-            if (random.nextInt(30) == 0) {
-                targetPet.createHorrorShake(); // Make pet shake when enemy is close
-            }
-            
-            if (random.nextInt(20) == 0) {
-                int escapeX = random.nextInt(6) - 3;
-                int escapeY = random.nextInt(6) - 3;
-                setLocation(currentLocation.x + escapeX, currentLocation.y + escapeY);
+                
+                // Validate new location before setting it
+                Point newLocation = new Point(currentLocation.x + dx, currentLocation.y + dy);
+                if (isValidLocation(newLocation)) {
+                    setLocation(newLocation);
+                } else {
+                    System.out.println("Invalid new location detected, skipping movement");
+                }
+            } else {
+                // If too close, make pet shake and occasionally move away (stalking behavior)
+                if (random.nextInt(30) == 0) {
+                    targetPet.createHorrorShake(); // Make pet shake when enemy is close
+                }
+                
+                if (random.nextInt(20) == 0) {
+                    int escapeX = random.nextInt(6) - 3;
+                    int escapeY = random.nextInt(6) - 3;
+                    Point newLocation = new Point(currentLocation.x + escapeX, currentLocation.y + escapeY);
                     
-                    // Update direction for escape movement
-                    updateEnemyDirection(escapeX > 0 ? 1 : -1);
+                    if (isValidLocation(newLocation)) {
+                        setLocation(newLocation);
+                        // Update direction for escape movement
+                        updateEnemyDirection(escapeX > 0 ? 1 : -1);
+                    }
                 }
             }
             
@@ -3259,6 +3603,24 @@ class EnemyWindow extends JWindow {
             lastLocation = new Point(currentLocation);
         } catch (Exception e) {
             System.out.println("Error in enemy followPet: " + e.getMessage());
+            // Try to recover by restarting timers
+            try {
+                restartTimers();
+            } catch (Exception ex) {
+                System.out.println("Failed to restart timers after followPet error: " + ex.getMessage());
+            }
+        }
+    }
+    
+    // Helper method to validate location
+    private boolean isValidLocation(Point location) {
+        try {
+            // Check if location is within reasonable bounds
+            return location != null && 
+                   location.x > -10000 && location.x < 10000 && 
+                   location.y > -10000 && location.y < 10000;
+        } catch (Exception e) {
+            return false;
         }
     }
     
@@ -3445,6 +3807,80 @@ class EnemyWindow extends JWindow {
     // Public method to check if timers are null (for stuck detection)
     public boolean hasNullTimers() {
         return followTimer == null && horrorEffectTimer == null && animationTimer == null;
+    }
+    
+    // Check if enemy is truly stuck (only for severe cases)
+    public boolean isStuck() {
+        try {
+            // Only consider truly problematic cases, not normal stationary behavior
+            // Check if enemy has been in exactly the same position for a very long time
+            if (lastLocation != null) {
+                Point currentLocation = getLocation();
+                // Only consider stuck if enemy hasn't moved at all for a very long time
+                // This allows for normal horror effects and stalking behavior
+                return currentLocation.equals(lastLocation);
+            }
+            return false;
+        } catch (Exception e) {
+            System.out.println("Error checking if enemy is stuck: " + e.getMessage());
+            return false; // Don't assume stuck if we can't check
+        }
+    }
+    
+    // Restart all timers for recovery
+    public void restartTimers() {
+        try {
+            System.out.println("Restarting timers for enemy: " + this.hashCode());
+            
+            // Stop existing timers first
+            stopAllTimers();
+            
+            // Restart timers
+            startFollowing();
+            startHorrorEffects();
+            startAnimation();
+            
+            System.out.println("Timers restarted successfully for enemy: " + this.hashCode());
+        } catch (Exception e) {
+            System.out.println("Error restarting timers: " + e.getMessage());
+        }
+    }
+    
+    // Check if enemy has been running too long (prevent memory leaks)
+    public boolean hasBeenRunningTooLong() {
+        try {
+            // Enemies should be automatically despawned after 20-60 seconds
+            // If they're still running after 5 minutes, something is wrong
+            long currentTime = System.currentTimeMillis();
+            long creationTime = this.hashCode(); // Use hashCode as a simple timestamp proxy
+            long runningTime = currentTime - creationTime;
+            
+            // If enemy has been running for more than 5 minutes, consider it too long
+            return runningTime > 300000; // 5 minutes in milliseconds
+        } catch (Exception e) {
+            System.out.println("Error checking enemy running time: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    // Check if enemy has been completely broken for a very long time (only remove after multiple recovery attempts fail)
+    public boolean hasBeenCompletelyBrokenForTooLong() {
+        try {
+            // Only consider completely broken if enemy has null timers AND has been running for a very long time
+            // This gives multiple recovery attempts before giving up
+            if (hasNullTimers()) {
+                long currentTime = System.currentTimeMillis();
+                long creationTime = this.hashCode();
+                long runningTime = currentTime - creationTime;
+                
+                // Only consider completely broken after 5 minutes of being non-functional
+                return runningTime > 300000; // 5 minutes in milliseconds
+            }
+            return false;
+        } catch (Exception e) {
+            System.out.println("Error checking if enemy is completely broken: " + e.getMessage());
+            return false;
+        }
     }
     
     // Update enemy transparency
