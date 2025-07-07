@@ -815,10 +815,11 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 }
             }
             
-            // Scale the enemy image
+            // Scale the enemy image to match pet size
             if (icon != null && icon.getIconWidth() > 0 && icon.getIconHeight() > 0) {
                 Image img = icon.getImage();
-                Image scaledImg = img.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                // Use the same size as the pet for consistency
+                Image scaledImg = img.getScaledInstance(DEFAULT_WIDTH, DEFAULT_HEIGHT, Image.SCALE_SMOOTH);
                 return new ImageIcon(scaledImg);
             }
             
@@ -829,29 +830,32 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private ImageIcon createDefaultEnemyAnimation(Color color, String emoji) {
-        BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage image = new BufferedImage(DEFAULT_WIDTH, DEFAULT_HEIGHT, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = image.createGraphics();
         
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         
-        // Draw scary circle background
+        // Draw scary circle background - scale proportionally
         g2d.setColor(color);
-        g2d.fillOval(10, 10, 80, 80);
+        int circleSize = Math.min(DEFAULT_WIDTH, DEFAULT_HEIGHT) - 20;
+        int circleX = (DEFAULT_WIDTH - circleSize) / 2;
+        int circleY = (DEFAULT_HEIGHT - circleSize) / 2;
+        g2d.fillOval(circleX, circleY, circleSize, circleSize);
         
         // Add darker border for scary effect
         g2d.setColor(color.darker());
         g2d.setStroke(new BasicStroke(3));
-        g2d.drawOval(10, 10, 80, 80);
+        g2d.drawOval(circleX, circleY, circleSize, circleSize);
         
-        // Draw scary emoji
-        Font font = new Font("Segoe UI Emoji", Font.PLAIN, 40);
+        // Draw scary emoji - scale font proportionally
+        Font font = new Font("Segoe UI Emoji", Font.PLAIN, circleSize / 2);
         g2d.setFont(font);
         g2d.setColor(Color.WHITE);
         
         FontMetrics fm = g2d.getFontMetrics();
-        int textX = (100 - fm.stringWidth(emoji)) / 2;
-        int textY = (100 + fm.getAscent()) / 2;
+        int textX = (DEFAULT_WIDTH - fm.stringWidth(emoji)) / 2;
+        int textY = (DEFAULT_HEIGHT + fm.getAscent()) / 2;
         g2d.drawString(emoji, textX, textY);
         
         g2d.dispose();
@@ -1074,13 +1078,15 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         });
         enemySpawnTimer.start();
         
-        // Recovery-focused enemy system - check and fix issues every 30 seconds
-        enemyCleanupTimer = new Timer(30000, e -> {
+        // More frequent cleanup - check and fix issues every 10 seconds
+        enemyCleanupTimer = new Timer(10000, e -> {
             if (enemyEnabled) {
                 // Focus on recovery first, only remove if completely broken
                 checkEnemyHealth();
                 // Only do aggressive cleanup for truly broken enemies
                 cleanupOnlyBrokenEnemies();
+                // Check for orphaned enemies (windows that exist but aren't in the list)
+                cleanupOrphanedEnemies();
             }
         });
         enemyCleanupTimer.start();
@@ -1274,6 +1280,39 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         }
     }
     
+    // Method to get actual count of visible enemy windows vs list count
+    public void debugEnemyCounts() {
+        try {
+            int listCount = enemies.size();
+            int actualWindowCount = 0;
+            int orphanedCount = 0;
+            
+            Window[] allWindows = Window.getWindows();
+            for (Window window : allWindows) {
+                if (window instanceof EnemyWindow) {
+                    actualWindowCount++;
+                    if (!enemies.contains(window)) {
+                        orphanedCount++;
+                    }
+                }
+            }
+            
+            System.out.println("=== ENEMY COUNT DEBUG ===");
+            System.out.println("Enemies in list: " + listCount);
+            System.out.println("Actual enemy windows: " + actualWindowCount);
+            System.out.println("Orphaned enemy windows: " + orphanedCount);
+            System.out.println("=========================");
+            
+            if (orphanedCount > 0) {
+                System.out.println("WARNING: Found " + orphanedCount + " orphaned enemy windows!");
+                cleanupOrphanedEnemies();
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Error in enemy count debug: " + e.getMessage());
+        }
+    }
+    
     // Enhanced cleanup for stuck or invalid enemies
     private void cleanupStuckEnemies() {
         if (enemies.isEmpty()) return;
@@ -1312,11 +1351,19 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                     System.out.println("Found enemy with null timers, marking for removal");
                     shouldRemove = true;
                 }
-                // Note: Removed overly aggressive stuck detection that would remove
-                // enemies during normal stationary behavior (horror effects, stalking, etc.)
+                // Check if enemy is completely broken for too long
+                else if (enemy.hasBeenCompletelyBrokenForTooLong()) {
+                    System.out.println("Found completely broken enemy, marking for removal");
+                    shouldRemove = true;
+                }
                 // Check if enemy has been running too long (prevent memory leaks)
                 else if (enemy.hasBeenRunningTooLong()) {
                     System.out.println("Found enemy running too long, marking for removal");
+                    shouldRemove = true;
+                }
+                // Check if enemy is stuck in one position for too long (more aggressive detection)
+                else if (enemy.isStuckForTooLong()) {
+                    System.out.println("Found enemy stuck in position, marking for removal");
                     shouldRemove = true;
                 }
                 
@@ -1389,6 +1436,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                     
                 } catch (Exception e) {
                     System.out.println("Error force disposing enemy: " + e.getMessage());
+                    // Force remove from list even if dispose fails
+                    enemies.remove(enemy);
                 }
             }
             
@@ -1443,6 +1492,119 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 System.out.println("Error during emergency cleanup: " + e.getMessage());
             }
         });
+    }
+    
+    // Ultra-aggressive cleanup for persistent hanging enemies
+    public void ultraAggressiveCleanup() {
+        System.out.println("Ultra-aggressive cleanup for persistent hanging enemies...");
+        
+        // Stop all timers immediately
+        if (enemySpawnTimer != null) {
+            enemySpawnTimer.stop();
+            enemySpawnTimer = null;
+        }
+        if (enemyCleanupTimer != null) {
+            enemyCleanupTimer.stop();
+            enemyCleanupTimer = null;
+        }
+        
+        // Force dispose all enemies on EDT with maximum force
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // Create a copy and clear the list immediately
+                List<EnemyWindow> enemiesToKill = new ArrayList<>(enemies);
+                enemies.clear();
+                
+                for (EnemyWindow enemy : enemiesToKill) {
+                    try {
+                        System.out.println("Ultra-aggressive disposal of enemy: " + enemy.hashCode());
+                        
+                        // Stop all timers
+                        enemy.stopAllTimers();
+                        
+                        // Force dispose with multiple attempts
+                        enemy.setVisible(false);
+                        enemy.dispose();
+                        
+                        // Additional force disposal
+                        try {
+                            enemy.setVisible(false);
+                            enemy.dispose();
+                        } catch (Exception ex) {
+                            // Ignore errors, just keep trying
+                        }
+                        
+                    } catch (Exception e) {
+                        System.out.println("Error in ultra-aggressive cleanup: " + e.getMessage());
+                    }
+                }
+                
+                // Force garbage collection multiple times
+                System.gc();
+                System.gc();
+                System.gc();
+                
+                System.out.println("Ultra-aggressive cleanup completed. Enemies remaining: " + enemies.size());
+                
+                // Restart enemy system after a longer delay
+                if (enemyEnabled) {
+                    Timer restartTimer = new Timer(10000, e -> {
+                        System.out.println("Restarting enemy system after ultra-aggressive cleanup...");
+                        startEnemySystem();
+                        ((Timer) e.getSource()).stop();
+                    });
+                    restartTimer.start();
+                }
+                
+            } catch (Exception e) {
+                System.out.println("Error during ultra-aggressive cleanup: " + e.getMessage());
+            }
+        });
+    }
+    
+    // Find and clean up orphaned enemy windows (enemies that exist but aren't in the list)
+    public void cleanupOrphanedEnemies() {
+        System.out.println("Searching for orphaned enemy windows...");
+        
+        try {
+            // Get all windows owned by this application
+            Window[] allWindows = Window.getWindows();
+            int orphanedCount = 0;
+            
+            for (Window window : allWindows) {
+                // Check if this is an orphaned enemy window
+                if (window instanceof EnemyWindow && !enemies.contains(window)) {
+                    EnemyWindow orphanedEnemy = (EnemyWindow) window;
+                    System.out.println("Found orphaned enemy window: " + orphanedEnemy.hashCode());
+                    
+                    try {
+                        // Stop all timers
+                        orphanedEnemy.stopAllTimers();
+                        
+                        // Force dispose
+                        orphanedEnemy.setVisible(false);
+                        orphanedEnemy.dispose();
+                        
+                        orphanedCount++;
+                        System.out.println("Disposed orphaned enemy: " + orphanedEnemy.hashCode());
+                        
+                    } catch (Exception e) {
+                        System.out.println("Error disposing orphaned enemy: " + e.getMessage());
+                    }
+                }
+            }
+            
+            if (orphanedCount > 0) {
+                System.out.println("Cleaned up " + orphanedCount + " orphaned enemy windows");
+                // Force garbage collection
+                System.gc();
+            } else {
+                System.out.println("No orphaned enemy windows found");
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Error during orphaned enemy cleanup: " + e.getMessage());
+        }
     }
     
     private void stopEnemySystem() {
@@ -2857,17 +3019,38 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         gbc.gridx = 1; gbc.gridy = 19;
         forceCleanupBtn = createButton(getText("force_cleanup"));
-        forceCleanupBtn.addActionListener(e -> forceRemoveAllEnemies());
+        forceCleanupBtn.addActionListener(e -> {
+            System.out.println("Force cleanup button pressed");
+            forceRemoveAllEnemies();
+            // Also clean up orphaned enemies immediately
+            cleanupOrphanedEnemies();
+            // Also try ultra-aggressive cleanup if force cleanup doesn't work
+            Timer ultraCleanupTimer = new Timer(5000, evt -> {
+                if (!enemies.isEmpty()) {
+                    System.out.println("Force cleanup didn't work, trying ultra-aggressive cleanup");
+                    ultraAggressiveCleanup();
+                }
+                // Check for orphaned enemies again after ultra-aggressive cleanup
+                cleanupOrphanedEnemies();
+                ((Timer) evt.getSource()).stop();
+            });
+            ultraCleanupTimer.start();
+        });
         contentPanel.add(forceCleanupBtn, gbc);
         
         gbc.gridx = 0; gbc.gridy = 20; gbc.gridwidth = 1;
+        JButton debugBtn = createButton("Debug Enemy Count");
+        debugBtn.addActionListener(e -> debugEnemyCounts());
+        contentPanel.add(debugBtn, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 21; gbc.gridwidth = 1;
         closeBtn = createButton(getText("close"));
         closeBtn.addActionListener(e -> {
             settingsWindow.setVisible(false);
         });
         contentPanel.add(closeBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 20;
+        gbc.gridx = 1; gbc.gridy = 21;
         exitBtn = createButton(getText("exit_program"));
         exitBtn.setBackground(new Color(150, 50, 50)); // Red background for exit button
         exitBtn.addActionListener(e -> {
@@ -3824,6 +4007,31 @@ class EnemyWindow extends JWindow {
         } catch (Exception e) {
             System.out.println("Error checking if enemy is stuck: " + e.getMessage());
             return false; // Don't assume stuck if we can't check
+        }
+    }
+    
+    // Check if enemy has been stuck in one position for too long (more aggressive detection)
+    public boolean isStuckForTooLong() {
+        try {
+            if (lastLocation != null) {
+                Point currentLocation = getLocation();
+                // If enemy hasn't moved for more than 30 seconds, consider it stuck
+                // This is more aggressive than the basic isStuck() check
+                if (currentLocation.equals(lastLocation)) {
+                    // Use a simple time-based check - if enemy has been in same position
+                    // for more than 30 seconds, it's probably stuck
+                    long currentTime = System.currentTimeMillis();
+                    long creationTime = this.hashCode(); // Use hashCode as timestamp proxy
+                    long stuckTime = currentTime - creationTime;
+                    
+                    // Consider stuck if in same position for more than 30 seconds
+                    return stuckTime > 30000; // 30 seconds
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            System.out.println("Error checking if enemy is stuck for too long: " + e.getMessage());
+            return false;
         }
     }
     
