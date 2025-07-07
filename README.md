@@ -9,11 +9,21 @@ A cute desktop pet application built with Java Swing that lives on your desktop 
 run_enhanced.bat    # Compile and run with error handling
 ```
 
-**For EXE Deployment:**
+Or manually:
 ```batch
-create_jar.bat      # Step 1: Create JAR
-create_minimal_jre.bat   # Step 2: Create portable JRE  
-create_exe.ps1      # Step 3: Create EXE
+javac AdvancedDesktopPet.java MusicManager.java
+java AdvancedDesktopPet
+```
+
+**For Portable Package Creation:**
+```batch
+create_jar.bat              # Step 1: Create JAR
+create_simple_launcher.bat   # Step 2: Create portable launcher
+```
+
+**For Complete Portable Package:**
+```batch
+create_final_exe.bat         # Complete workflow (JAR + JRE + Launcher)
 ```
 
 📖 **See [STREAMLINED_WORKFLOW.md](STREAMLINED_WORKFLOW.md) for complete instructions**
@@ -47,31 +57,48 @@ create_exe.ps1      # Step 3: Create EXE
 
 | Option | Command | Size | Portability |
 |--------|---------|------|-------------|
-| **JAR Only** | `create_jar.bat` | ~1MB | Requires Java |
-| **EXE + System Java** | `create_jar.bat` → `create_exe.ps1` | ~2MB | Requires Java |
-| **Portable EXE** | All 3 commands | ~80MB | No Java needed |
+| **JAR Only** | `create_jar.bat` | ~42MB | Requires Java |
+| **Portable Package** | `create_simple_launcher.bat` | ~80MB | No Java needed |
+| **Complete Package** | `create_final_exe.bat` | ~80MB | No Java needed |
 
 ## 🛠️ **Requirements**
 
 - **For Development**: Java 8+ (JDK recommended)
-- **For EXE Creation**: Java 11+ (JDK with jlink)
-- **For End Users**: None (if using portable EXE)
+- **For Portable Package Creation**: Java 11+ (JDK with jlink)
+- **For End Users**: None (if using portable package)
 
 ## 📁 **Project Structure**
 
 ```
 pet/
 ├── AdvancedDesktopPet.java     # Main application
+├── MusicManager.java           # Music system (required)
 ├── Image/                      # Pet sprites and assets
+│   ├── chibi01.png             # Main pet character
+│   ├── chibi02.png             # Alternative pet character
+│   ├── chibi03.png             # Alternative pet character
+│   ├── enemy01.png             # Enemy character
+│   ├── enemy02.png             # Enemy character
+│   ├── enemy03.png             # Enemy character
+│   └── chibi01.ico             # Application icon
 ├── music/                      # Audio files
-├── run.bat                     # Basic development
-├── run_enhanced.bat           # Enhanced development
-├── create_jar.bat             # JAR creation
-├── create_minimal_jre.bat     # Portable JRE creation
-├── create_exe.ps1             # EXE creation
-├── diagnose_java.bat          # Java troubleshooting
-├── cleanup.bat                # Clean up temp files
-└── STREAMLINED_WORKFLOW.md    # Complete guide
+│   ├── normal.wav              # Normal background music
+│   └── horror.wav              # Horror mode music
+├── DesktopPet-Portable-EXE/    # Final portable package
+│   ├── DesktopPet.bat          # Launcher (no Java needed)
+│   ├── jre/                    # Embedded Java runtime
+│   ├── lib/AdvancedDesktopPet.jar # Application
+│   ├── resources/Image/        # All image files
+│   ├── resources/music/        # All music files
+│   └── chibi01.ico             # Application icon
+├── run.bat                     # Basic development launcher
+├── run_enhanced.bat            # Enhanced development launcher
+├── create_jar.bat              # JAR creation
+├── create_simple_launcher.bat  # Portable launcher creation
+├── create_final_exe.bat        # Complete package creation
+├── diagnose_java.bat           # Java troubleshooting
+├── cleanup.bat                 # Clean up temp files
+└── STREAMLINED_WORKFLOW.md     # Complete guide
 ```
 
 ## 🔧 **Troubleshooting**
@@ -85,20 +112,33 @@ cleanup.bat          # Clean up .class files and temp artifacts
 Common solutions:
 - Install Java from [adoptium.net](https://adoptium.net/)
 - Use JDK (not JRE) for development
-- Run PowerShell as Administrator for EXE creation
+- Ensure you have Java 11+ for portable package creation
 
 ## 🎨 **Customization**
 
 You can customize the pet by:
 1. **Replace Images**: Update files in `Image/` folder
 2. **Add Music**: Add audio files to `music/` folder
-3. **Modify Behavior**: Edit `AdvancedDesktopPet.java`
+3. **Modify Behavior**: Edit `AdvancedDesktopPet.java` and `MusicManager.java`
 4. **Change Size**: Use settings menu or modify constants
 
-## 📖 **Documentation**
+## 📦 **Distribution**
+
+The `DesktopPet-Portable-EXE` folder contains everything needed:
+- **DesktopPet.bat** - Launcher (works without Java installation)
+- **jre/** - Embedded Java runtime
+- **lib/AdvancedDesktopPet.jar** - Your application
+- **resources/Image/** - All character images
+- **resources/music/** - All music files
+- **chibi01.ico** - Application icon
+
+Users can simply:
+1. Extract the folder anywhere
+2. Double-click `DesktopPet.bat`
+3. No Java installation required!
+
+## 📚 **Documentation**
 
 - **[STREAMLINED_WORKFLOW.md](STREAMLINED_WORKFLOW.md)** - Complete development and deployment guide
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Detailed deployment instructions
-- **[SETUP_README.md](SETUP_README.md)** - Setup instructions
 
 Enjoy your new desktop companion! 🐾 

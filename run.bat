@@ -1,6 +1,6 @@
 @echo off
 echo Compiling Advanced Desktop Pet...
-javac AdvancedDesktopPet.java
+javac AdvancedDesktopPet.java MusicManager.java
 
 if %errorlevel% equ 0 (
     echo Compilation successful!

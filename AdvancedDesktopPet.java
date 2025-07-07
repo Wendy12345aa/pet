@@ -74,15 +74,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private Map<String, String> englishTexts = new HashMap<>();
     private Map<String, String> chineseTexts = new HashMap<>();
     
-    // Music system
-    private static Clip normalMusicClip;
-    private static Clip horrorMusicClip;
+    // Music system - now managed by MusicManager
     private static boolean musicEnabled = true;
-    private static boolean isPlayingHorror = false;
-    private static boolean wasPlayingHorrorBeforeDisable = false; // Track state before disable
-    private static Timer musicCheckTimer;
-    private static boolean musicInitialized = false; // Track if music system is already initialized
-    private static boolean enemySystemStarting = false; // Prevent music switching during enemy startup
     
     // Loading screen
     private JWindow loadingWindow;
@@ -124,6 +117,10 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         showLoadingScreen();
         initializeLanguages();
         allPets.add(this); // Register this pet
+        MusicManager.updatePetList(allPets); // Update music manager
+        
+
+        
         // Load resources asynchronously
         SwingUtilities.invokeLater(() -> {
             loadResourcesAsync();
@@ -545,210 +542,21 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
 
     
     private void initializeMusic() {
-        // Only initialize music system once for all instances
-        if (musicInitialized) {
-            return;
-        }
-        
-        try {
-            // Check if music files exist
-            File normalMusicFile = new File("music/normal.wav");
-            File horrorMusicFile = new File("music/horror.wav");
-            
-            if (!normalMusicFile.exists()) {
-                System.out.println("Normal music file not found: music/normal.wav");
-                return;
-            }
-            
-            if (!horrorMusicFile.exists()) {
-                System.out.println("Horror music file not found: music/horror.wav");
-                return;
-            }
-            
-            // Load normal music using Java's native WAV support
-            try {
-                AudioInputStream normalStream = AudioSystem.getAudioInputStream(normalMusicFile);
-                normalMusicClip = AudioSystem.getClip();
-                normalMusicClip.open(normalStream);
-                // Don't start looping yet - will be set when actually playing
-                System.out.println("Normal music loaded successfully");
-            } catch (Exception e) {
-                System.out.println("Error loading normal music: " + e.getMessage());
-            }
-            
-            // Load horror music using Java's native WAV support
-            try {
-                AudioInputStream horrorStream = AudioSystem.getAudioInputStream(horrorMusicFile);
-                horrorMusicClip = AudioSystem.getClip();
-                horrorMusicClip.open(horrorStream);
-                // Don't start looping yet - will be set when actually playing
-                System.out.println("Horror music loaded successfully");
-            } catch (Exception e) {
-                System.out.println("Error loading horror music: " + e.getMessage());
-            }
-            
-            // Start music check timer (more responsive for immediate switching)
-            musicCheckTimer = new Timer(2000, e -> {
-                checkAndUpdateMusic();
-                restartMusicIfNeeded(); // Ensure music is looping if it should be
-            });
-            musicCheckTimer.start();
-            
-            // Start with normal music if enabled (and ensure horror is stopped)
-            if (musicEnabled && normalMusicClip != null) {
-                // Make sure horror music is stopped and not running
-                if (horrorMusicClip != null) {
-                    horrorMusicClip.stop();
-                    horrorMusicClip.setFramePosition(0); // Reset to beginning
-                }
-                
-                // Start normal music with looping
-                normalMusicClip.setFramePosition(0); // Reset to beginning
-                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                isPlayingHorror = false;
-                System.out.println("Started normal music playback with looping");
-            }
-            
-            musicInitialized = true;
-            
-        } catch (Exception e) {
-            System.out.println("Error initializing music: " + e.getMessage());
-            e.printStackTrace();
-        }
+        // Initialize music system using MusicManager
+        MusicManager.initialize();
+        MusicManager.updatePetList(allPets);
     }
     
-    private static void checkAndUpdateMusic() {
-        if (!musicEnabled) {
-            // If music is disabled, stop all music and remember state
-            if (normalMusicClip != null && normalMusicClip.isRunning()) {
-                normalMusicClip.stop();
-                System.out.println("Music disabled - stopped normal music");
-                wasPlayingHorrorBeforeDisable = false;
-            }
-            if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
-                horrorMusicClip.stop();
-                wasPlayingHorrorBeforeDisable = true;
-                System.out.println("Music disabled - stopped horror music");
-            }
-            return;
-        }
-        
-        // Check if no music is currently playing (music was just re-enabled or stopped)
-        if (normalMusicClip != null && !normalMusicClip.isRunning() && 
-            horrorMusicClip != null && !horrorMusicClip.isRunning()) {
-            
-            boolean hasEnemies = !allPets.isEmpty() && allPets.stream().anyMatch(pet -> !pet.enemies.isEmpty());
-            
-            if (hasEnemies || wasPlayingHorrorBeforeDisable) {
-                // Start horror music if enemies are present or was playing before
-                horrorMusicClip.setFramePosition(0); // Reset to beginning
-                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                isPlayingHorror = true;
-                wasPlayingHorrorBeforeDisable = false;
-                System.out.println("Music re-enabled - started horror music with looping");
-            } else {
-                // Start normal music
-                normalMusicClip.setFramePosition(0); // Reset to beginning
-                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                isPlayingHorror = false;
-                wasPlayingHorrorBeforeDisable = false;
-                System.out.println("Music re-enabled - started normal music with looping");
-            }
-            return;
-        }
-        
-        // Only switch music if there's a significant change in enemy presence
-        // This prevents constant switching that could interrupt looping
-        // Skip switching if enemy system is starting up
-        if (enemySystemStarting) {
-            System.out.println("Skipping music switch - enemy system is starting up");
-            return;
-        }
-        
-        boolean hasEnemies = !allPets.isEmpty() && allPets.stream().anyMatch(pet -> !pet.enemies.isEmpty());
-        
-        if (hasEnemies && !isPlayingHorror && normalMusicClip != null && normalMusicClip.isRunning()) {
-            // Switch to horror music only if normal music is currently playing
-            System.out.println("Enemies detected - switching to horror music");
-            normalMusicClip.stop();
-            normalMusicClip.setFramePosition(0); // Reset to beginning
-            if (horrorMusicClip != null) {
-                horrorMusicClip.setFramePosition(0); // Reset to beginning
-                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                isPlayingHorror = true;
-                System.out.println("Started horror music with looping");
-            }
-        } else if (!hasEnemies && isPlayingHorror && horrorMusicClip != null && horrorMusicClip.isRunning()) {
-            // Switch to normal music only if horror music is currently playing
-            System.out.println("No enemies - switching to normal music");
-            horrorMusicClip.stop();
-            horrorMusicClip.setFramePosition(0); // Reset to beginning
-            if (normalMusicClip != null) {
-                normalMusicClip.setFramePosition(0); // Reset to beginning
-                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                isPlayingHorror = false;
-                System.out.println("Started normal music with looping");
-            }
-        }
-        
-        // Ensure music is looping if it should be playing
-        if (musicEnabled) {
-            if (isPlayingHorror && horrorMusicClip != null && !horrorMusicClip.isRunning()) {
-                horrorMusicClip.setFramePosition(0); // Reset to beginning
-                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                System.out.println("Restarted horror music loop");
-            } else if (!isPlayingHorror && normalMusicClip != null && !normalMusicClip.isRunning()) {
-                normalMusicClip.setFramePosition(0); // Reset to beginning
-                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                System.out.println("Restarted normal music loop");
-            }
-        }
+    // Music methods now handled by MusicManager
+    
+    // Getter for enemies list (used by MusicManager)
+    public List<EnemyWindow> getEnemies() {
+        return enemies;
     }
     
     private static void setMusicEnabled(boolean enabled) {
         musicEnabled = enabled;
-        if (musicEnabled) {
-            checkAndUpdateMusic(); // Start music if enabled
-        } else {
-            // Stop all music
-            if (normalMusicClip != null && normalMusicClip.isRunning()) {
-                normalMusicClip.stop();
-            }
-            if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
-                horrorMusicClip.stop();
-            }
-            isPlayingHorror = false;
-        }
-    }
-    
-    // Method to restart music if it stops unexpectedly
-    private static void restartMusicIfNeeded() {
-        if (!musicEnabled) return;
-        if (enemySystemStarting) return; // Skip during enemy system startup
-        
-        try {
-            boolean hasEnemies = !allPets.isEmpty() && allPets.stream().anyMatch(pet -> !pet.enemies.isEmpty());
-            
-            if (hasEnemies) {
-                // Should be playing horror music
-                if (horrorMusicClip != null && !horrorMusicClip.isRunning()) {
-                    horrorMusicClip.setFramePosition(0); // Reset to beginning
-                    horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                    isPlayingHorror = true;
-                    System.out.println("Restarted horror music loop");
-                }
-            } else {
-                // Should be playing normal music
-                if (normalMusicClip != null && !normalMusicClip.isRunning()) {
-                    normalMusicClip.setFramePosition(0); // Reset to beginning
-                    normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                    isPlayingHorror = false;
-                    System.out.println("Restarted normal music loop");
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Error restarting music: " + e.getMessage());
-        }
+        MusicManager.setMusicEnabled(enabled);
     }
     
     private void loadEnemyImages() {
@@ -1187,17 +995,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         }
         
         // Switch back to normal music if no enemies remain after cleanup
-        if (enemies.isEmpty() && musicEnabled && normalMusicClip != null && isPlayingHorror) {
-            SwingUtilities.invokeLater(() -> {
-                if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
-                    horrorMusicClip.stop();
-                    horrorMusicClip.setFramePosition(0);
-                }
-                normalMusicClip.setFramePosition(0);
-                normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                isPlayingHorror = false;
-                System.out.println("Immediately switched to normal music (no enemies after cleanup)");
-            });
+        if (enemies.isEmpty() && musicEnabled) {
+            MusicManager.switchToNormalMusic();
         }
         
         if (!enemiesToRemove.isEmpty()) {
@@ -1219,17 +1018,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         enemies.add(enemy);
         
         // Immediately switch to horror music if this is the first enemy
-        if (enemies.size() == 1 && musicEnabled && horrorMusicClip != null) {
-            SwingUtilities.invokeLater(() -> {
-                if (normalMusicClip != null && normalMusicClip.isRunning()) {
-                    normalMusicClip.stop();
-                    normalMusicClip.setFramePosition(0);
-                }
-                horrorMusicClip.setFramePosition(0);
-                horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                isPlayingHorror = true;
-                System.out.println("Immediately switched to horror music (first enemy spawned)");
-            });
+        if (enemies.size() == 1 && musicEnabled) {
+            MusicManager.switchToHorrorMusic();
         }
         
         // Remove enemy after some time (20-60 seconds)
@@ -1241,17 +1031,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 enemies.remove(enemy);
                 
                 // Switch back to normal music if no enemies remain
-                if (enemies.isEmpty() && musicEnabled && normalMusicClip != null) {
-                    SwingUtilities.invokeLater(() -> {
-                        if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
-                            horrorMusicClip.stop();
-                            horrorMusicClip.setFramePosition(0);
-                        }
-                        normalMusicClip.setFramePosition(0);
-                        normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                        isPlayingHorror = false;
-                        System.out.println("Immediately switched to normal music (no enemies remaining)");
-                    });
+                if (enemies.isEmpty() && musicEnabled) {
+                    MusicManager.switchToNormalMusic();
                 }
                 
                 System.out.println("Enemy despawned. Remaining enemies: " + enemies.size());
@@ -1650,26 +1431,15 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         if (enabled) {
             System.out.println("Enemy system enabled! Enemies will start spawning...");
-            enemySystemStarting = true; // Set flag to prevent music switching interference
+            MusicManager.setEnemySystemStarting(true); // Set flag to prevent music switching interference
             startEnemySystem();
             createScreenFlashEffect(); // Horror effect when enabled
             // Immediately switch to horror music
-            SwingUtilities.invokeLater(() -> {
-                if (musicEnabled && horrorMusicClip != null) {
-                    if (normalMusicClip != null && normalMusicClip.isRunning()) {
-                        normalMusicClip.stop();
-                        normalMusicClip.setFramePosition(0);
-                    }
-                    horrorMusicClip.setFramePosition(0);
-                    horrorMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                    isPlayingHorror = true;
-                    System.out.println("Immediately switched to horror music");
-                }
-            });
+            MusicManager.switchToHorrorMusic();
             
             // Clear the flag after enemies have had time to spawn
             Timer clearFlagTimer = new Timer(5000, e -> {
-                enemySystemStarting = false;
+                MusicManager.setEnemySystemStarting(false);
                 System.out.println("Enemy system startup complete - music switching re-enabled");
                 ((Timer) e.getSource()).stop();
             });
@@ -1677,21 +1447,10 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             
         } else {
             System.out.println("Enemy system disabled. Stopping all enemies...");
-            enemySystemStarting = false; // Clear flag immediately when disabling
+            MusicManager.setEnemySystemStarting(false); // Clear flag immediately when disabling
             stopEnemySystem();
             // Immediately switch back to normal music
-            SwingUtilities.invokeLater(() -> {
-                if (musicEnabled && normalMusicClip != null) {
-                    if (horrorMusicClip != null && horrorMusicClip.isRunning()) {
-                        horrorMusicClip.stop();
-                        horrorMusicClip.setFramePosition(0);
-                    }
-                    normalMusicClip.setFramePosition(0);
-                    normalMusicClip.loop(Clip.LOOP_CONTINUOUSLY);
-                    isPlayingHorror = false;
-                    System.out.println("Immediately switched to normal music");
-                }
-            });
+            MusicManager.switchToNormalMusic();
         }
     }
     
@@ -2490,6 +2249,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         }
         
         allPets.remove(this);
+        MusicManager.updatePetList(allPets); // Update music manager
         
         // Stop timers
         if (animationTimer != null) animationTimer.stop();

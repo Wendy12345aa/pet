@@ -29,8 +29,8 @@ public class DesktopPetLauncher
         try
         {
             string appDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string jarFile = Path.Combine(appDir, "AdvancedDesktopPet.jar");
-            string jreDir = Path.Combine(appDir, "minimal-jre");
+            string jarFile = Path.Combine(appDir, "lib", "AdvancedDesktopPet.jar");
+            string jreDir = Path.Combine(appDir, "jre");
             
             // Check if JAR file exists
             if (!File.Exists(jarFile))
@@ -107,8 +107,8 @@ try {
 setlocal enabledelayedexpansion
 
 set "APP_DIR=%~dp0"
-set "JAR_FILE=%APP_DIR%AdvancedDesktopPet.jar"
-set "JRE_DIR=%APP_DIR%minimal-jre"
+set "JAR_FILE=%APP_DIR%lib\AdvancedDesktopPet.jar"
+set "JRE_DIR=%APP_DIR%jre"
 
 if exist "%JRE_DIR%\bin\java.exe" (
     echo [INFO] Using embedded JRE - no Java installation required!
@@ -169,4 +169,4 @@ Write-Host "- Or double-click DesktopPet.bat as alternative" -ForegroundColor Wh
 Write-Host "- The application works without Java installation!" -ForegroundColor Green
 Write-Host ""
 
-Read-Host "Press Enter to exit" 
+Read-Host "Press Enter to exit"

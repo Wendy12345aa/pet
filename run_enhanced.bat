@@ -22,7 +22,7 @@ if exist "AdvancedDesktopPet.jar" (
     java -jar AdvancedDesktopPet.jar
 ) else if exist "AdvancedDesktopPet.java" (
     echo [INFO] Compiling and running Desktop Pet...
-    javac AdvancedDesktopPet.java
+    javac AdvancedDesktopPet.java MusicManager.java
     if %errorlevel% equ 0 (
         echo [SUCCESS] Compilation successful
         echo [INFO] Starting Desktop Pet...
