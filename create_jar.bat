@@ -8,7 +8,7 @@ del *.class 2>nul
 
 echo.
 echo 2. Compiling Java source...
-javac AdvancedDesktopPet.java
+javac AdvancedDesktopPet.java MusicManager.java
 if errorlevel 1 (
     echo ERROR: Compilation failed!
     pause
@@ -20,8 +20,8 @@ echo 3. Checking generated class files...
 dir *.class
 
 echo.
-echo 4. Creating JAR file with main class...
-jar cfe AdvancedDesktopPet.jar AdvancedDesktopPet *.class
+echo 4. Creating JAR file with main class and resources...
+jar cfe AdvancedDesktopPet.jar AdvancedDesktopPet *.class Image music
 if errorlevel 1 (
     echo ERROR: JAR creation failed!
     pause

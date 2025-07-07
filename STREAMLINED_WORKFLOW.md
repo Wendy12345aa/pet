@@ -2,7 +2,7 @@
 
 ## 🎯 **Quick Start**
 
-This guide provides a **simplified workflow** for developing and deploying the Desktop Pet application. All complex scripts have been removed, leaving only essential tools.
+This guide provides a **simplified workflow** for developing and deploying the Desktop Pet application with a focus on creating portable packages that work without Java installation.
 
 ---
 
@@ -10,6 +10,7 @@ This guide provides a **simplified workflow** for developing and deploying the D
 
 ### **Core Application:**
 - `AdvancedDesktopPet.java` - Main application source code
+- `MusicManager.java` - Music system (required)
 - `Image/` - Pet sprites and assets
 - `music/` - Audio files
 
@@ -19,8 +20,8 @@ This guide provides a **simplified workflow** for developing and deploying the D
 
 ### **Deployment Scripts:**
 - `create_jar.bat` - Creates JAR file
-- `create_minimal_jre.bat` - Creates portable Java runtime
-- `create_exe.ps1` - Creates standalone EXE file
+- `create_simple_launcher.bat` - Creates portable launcher
+- `create_final_exe.bat` - Complete portable package creation
 
 ### **Troubleshooting:**
 - `diagnose_java.bat` - Java installation diagnostics
@@ -63,7 +64,7 @@ run.bat
 ```
 
 **What it does:**
-- Compiles `AdvancedDesktopPet.java`
+- Compiles `AdvancedDesktopPet.java` and `MusicManager.java`
 - Runs the application if compilation succeeds
 - Shows error messages if compilation fails
 
@@ -81,80 +82,69 @@ run_enhanced.bat
 
 ---
 
-## 🚀 **EXE Deployment Workflow**
+## 🚀 **Portable Package Deployment Workflow**
 
-### **Step 1: Create JAR File**
+### **Option 1: Simple Launcher (Recommended)**
 ```batch
+# Step 1: Create JAR file
 create_jar.bat
+
+# Step 2: Create portable launcher
+create_simple_launcher.bat
 ```
 
 **What it does:**
-- Cleans old class files
-- Compiles the Java source code
 - Creates `AdvancedDesktopPet.jar`
-- Copies JAR to portable folder
+- Creates `DesktopPet.bat` launcher
+- Copies everything to `DesktopPet-Portable-EXE/` folder
+- Includes embedded JRE for portability
 
-**Output:** `AdvancedDesktopPet.jar`
+**Output:** Complete portable package in `DesktopPet-Portable-EXE/`
 
-### **Step 2: Create Portable JRE (Optional)**
+### **Option 2: Complete Package Creation**
 ```batch
-create_minimal_jre.bat
+# One-command complete package creation
+create_final_exe.bat
 ```
 
 **What it does:**
-- Creates a minimal Java runtime (only needed modules)
-- Significantly smaller than full JRE
-- Enables true portability (no Java installation needed)
-- Creates `minimal-jre/` folder
+- Creates JAR file
+- Creates minimal JRE
+- Creates portable launcher
+- Verifies all files are included
+- Creates complete distribution package
 
-**Output:** `minimal-jre/` folder (~30-50MB instead of 200+MB)
-
-### **Step 3: Create EXE File**
-```batch
-create_exe.ps1
-```
-
-**What it does:**
-- Creates a true Windows EXE file
-- Includes C# launcher that finds Java automatically
-- Creates desktop shortcut
-- Works with both system Java and embedded JRE
-
-**Output:** 
-- `DesktopPet.exe` - Main executable
-- `DesktopPet.bat` - Backup launcher
-- Desktop shortcut
+**Output:** Complete portable package in `DesktopPet-Portable-EXE/`
 
 ---
 
 ## 📦 **Deployment Scenarios**
 
-### **Scenario 1: Full Portable (Recommended)**
+### **Scenario 1: Portable Package (Recommended)**
 ```batch
 # Create complete portable package
-create_jar.bat
-create_minimal_jre.bat
-create_exe.ps1
+create_final_exe.bat
 ```
 
 **Result:** 
 - Works on any Windows PC
 - No Java installation required
-- ~50-80MB total size
+- ~80MB total size
 - Professional deployment
+- All images and music included
 
-### **Scenario 2: Lightweight (Requires Java)**
+### **Scenario 2: Simple Launcher**
 ```batch
-# Create EXE that requires Java
+# Create portable launcher
 create_jar.bat
-create_exe.ps1
+create_simple_launcher.bat
 ```
 
 **Result:**
-- Smaller package size
-- Requires Java installation on target PC
-- ~1-2MB total size
-- Good for tech-savvy users
+- Works on any Windows PC
+- No Java installation required
+- ~80MB total size
+- Good for distribution
 
 ### **Scenario 3: JAR Only (Developer)**
 ```batch
@@ -165,7 +155,7 @@ create_jar.bat
 **Result:**
 - Requires Java installation
 - Run with: `java -jar AdvancedDesktopPet.jar`
-- Smallest size (~1MB)
+- ~42MB size
 - Good for developers
 
 ---
@@ -193,8 +183,8 @@ diagnose_java.bat
 | `javac` command not found | Install JDK (not JRE) |
 | `jlink` command not found | Install JDK 11+ |
 | JAVA_HOME not set | Set environment variable to JDK path |
-| Minimal JRE creation fails | Run `diagnose_java.bat` for details |
-| EXE doesn't work | Check if JAR was created successfully |
+| JRE creation fails | Run `diagnose_java.bat` for details |
+| Launcher doesn't work | Check if JAR was created successfully |
 
 ---
 
@@ -203,20 +193,25 @@ diagnose_java.bat
 After successful deployment, you'll have:
 
 ```
-📦 Distribution Package
-├── DesktopPet.exe           # Main executable
-├── DesktopPet.bat           # Backup launcher
-├── AdvancedDesktopPet.jar   # Application JAR
-├── minimal-jre/             # Portable Java runtime
+📦 DesktopPet-Portable-EXE/
+├── DesktopPet.bat           # Launcher (no Java needed)
+├── jre/                     # Embedded Java runtime
 │   └── bin/java.exe         # Java executable
-├── Image/                   # Pet sprites
-│   ├── chibi01.png
-│   ├── chibi02.png
-│   ├── chibi03.png
-│   ├── enemy01.png
-│   ├── enemy02.png
-│   └── enemy03.png
-└── music/                   # Audio files
+├── lib/
+│   └── AdvancedDesktopPet.jar # Application JAR
+├── resources/
+│   ├── Image/               # All pet sprites
+│   │   ├── chibi01.png
+│   │   ├── chibi02.png
+│   │   ├── chibi03.png
+│   │   ├── enemy01.png
+│   │   ├── enemy02.png
+│   │   ├── enemy03.png
+│   │   └── chibi01.ico
+│   └── music/               # All audio files
+│       ├── normal.wav
+│       └── horror.wav
+└── chibi01.ico              # Application icon
 ```
 
 ---
@@ -224,9 +219,10 @@ After successful deployment, you'll have:
 ## 🎯 **Usage Instructions**
 
 ### **For End Users:**
-1. Double-click `DesktopPet.exe`
-2. Pet appears on desktop
-3. **Controls:**
+1. Extract `DesktopPet-Portable-EXE` folder anywhere
+2. Double-click `DesktopPet.bat`
+3. Pet appears on desktop
+4. **Controls:**
    - Left-click + drag to move
    - Double-click for jump animation
    - Middle-click for settings
@@ -234,9 +230,9 @@ After successful deployment, you'll have:
    - System tray icon for show/hide
 
 ### **For Developers:**
-1. Edit `AdvancedDesktopPet.java`
+1. Edit `AdvancedDesktopPet.java` or `MusicManager.java`
 2. Test with `run_enhanced.bat`
-3. Deploy with 3-step process above
+3. Deploy with `create_final_exe.bat`
 
 ---
 
@@ -244,9 +240,8 @@ After successful deployment, you'll have:
 
 | Deployment Type | Size | Java Required | Portability |
 |----------------|------|---------------|-------------|
-| JAR Only | ~1MB | ✅ Yes | ❌ Low |
-| EXE + System Java | ~2MB | ✅ Yes | ⚠️ Medium |
-| EXE + Embedded JRE | ~80MB | ❌ No | ✅ High |
+| JAR Only | ~42MB | ✅ Yes | ❌ Low |
+| Portable Package | ~80MB | ❌ No | ✅ High |
 
 ---
 
@@ -259,8 +254,8 @@ run_enhanced.bat           # Robust test
 
 # Deployment
 create_jar.bat             # Step 1: Create JAR
-create_minimal_jre.bat     # Step 2: Create portable JRE
-create_exe.ps1             # Step 3: Create EXE
+create_simple_launcher.bat # Step 2: Create portable launcher
+create_final_exe.bat       # Complete package creation
 
 # Troubleshooting
 diagnose_java.bat          # Check Java setup
@@ -274,11 +269,11 @@ cleanup.bat                # Remove .class files and temp artifacts
 ## 💡 **Tips & Best Practices**
 
 1. **Always test with `run_enhanced.bat` before deploying**
-2. **Use full portable deployment for distribution**
-3. **Keep `minimal-jre` folder with your EXE**
+2. **Use `create_final_exe.bat` for complete package creation**
+3. **Keep the entire `DesktopPet-Portable-EXE` folder together**
 4. **Test on a clean Windows machine without Java**
-5. **Include all files in the Image/ directory**
-6. **Don't delete the JAR file after creating EXE**
+5. **All images and music are automatically included**
+6. **Don't delete the JAR file after creating package**
 7. **Run `cleanup.bat` regularly to keep project clean**
 
 ---
@@ -286,8 +281,8 @@ cleanup.bat                # Remove .class files and temp artifacts
 ## 🔗 **Additional Resources**
 
 - **Java Installation:** [adoptium.net](https://adoptium.net/)
-- **PowerShell Execution Policy:** Run as Administrator: `Set-ExecutionPolicy RemoteSigned`
-- **Windows Defender:** May flag EXE as unknown - add exception if needed
+- **Distribution:** Zip the entire `DesktopPet-Portable-EXE` folder
+- **Windows Defender:** May flag launcher as unknown - add exception if needed
 
 ---
 

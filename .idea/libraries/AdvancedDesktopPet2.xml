@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="AdvancedDesktopPet2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/DesktopPet-Portable-EXE/lib/AdvancedDesktopPet.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
