@@ -489,6 +489,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private void loadAnimations() {
+        System.out.println("Loading animations...");
         specialAnimations = new ArrayList<>();
         
         // Try to load PNG files from Image folder first
@@ -533,6 +534,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         }
         
         // Load enemy images
+        System.out.println("About to load enemy images...");
         loadEnemyImages();
         
         // Set initial animation
@@ -560,22 +562,22 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private void loadEnemyImages() {
+        System.out.println("Loading enemy images...");
         enemyImages.clear();
         
-        // Try to load enemy images from Image folder - using the specific chibi enemy names
-        String[] enemyFiles = {"Image\\\u654c\u4ebachibi01.png", "Image\\\u654c\u4ebachibi02.png", "Image\\\u654c\u4ebachibi03.png"};
-        
-        for (String filename : enemyFiles) {
+        // Try to load enemy images from Image folder (resources root)
+        for (int i = 1; i <= 3; i++) {
+            String filename = "Image/enemy0" + i + ".png";
             ImageIcon enemyImage = loadEnemyImageSafely(filename);
             if (enemyImage != null) {
                 enemyImages.add(enemyImage);
             }
         }
         
-        // Also try alternative naming patterns
+        // Also try alternative naming patterns if none found
         if (enemyImages.isEmpty()) {
             for (int i = 1; i <= 3; i++) {
-                String filename = "Image\\enemy0" + i + ".png";
+                String filename = "resources/Image/enemy0" + i + ".png";
                 ImageIcon enemyImage = loadEnemyImageSafely(filename);
                 if (enemyImage != null) {
                     enemyImages.add(enemyImage);
@@ -585,9 +587,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         // If no enemy images found, create default scary enemies
         if (enemyImages.isEmpty()) {
+            System.out.println("No enemy images found - using default animations");
             enemyImages.add(createDefaultEnemyAnimation(new Color(255, 0, 0, 200), "X"));
             enemyImages.add(createDefaultEnemyAnimation(new Color(0, 0, 0, 200), "!"));
             enemyImages.add(createDefaultEnemyAnimation(new Color(128, 0, 128, 200), "?"));
+        } else {
+            System.out.println("Loaded " + enemyImages.size() + " enemy images successfully");
         }
     }
     
@@ -599,25 +604,47 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             
             if (resource != null) {
                 icon = new ImageIcon(resource);
+                System.out.println("Successfully loaded enemy image from resources: " + filename);
             } else {
-                // Try to load from current directory
-                File file = new File(filename);
-                if (file.exists()) {
-                    icon = new ImageIcon(filename);
-                } else {
-                    // Try alternative encoding/path approaches
-                    String[] alternatives = {
-                        filename.replace("\u654c\u4eba", "enemy"),
-                        filename.replace("/", "\\"),
-                        "Image\\" + filename.substring(Math.max(filename.lastIndexOf("/"), filename.lastIndexOf("\\")) + 1),
-                        filename
-                    };
-                    
-                    for (String alt : alternatives) {
-                        File altFile = new File(alt);
-                        if (altFile.exists()) {
-                            icon = new ImageIcon(alt);
-                            break;
+                // Try alternative resource paths
+                String[] resourcePaths = {
+                    "/" + filename,
+                    "/" + filename.replace("resources/", ""),
+                    "/Image/" + filename.substring(filename.lastIndexOf("/") + 1),
+                    "/resources/Image/" + filename.substring(filename.lastIndexOf("/") + 1)
+                };
+                
+                for (String path : resourcePaths) {
+                    resource = getClass().getResource(path);
+                    if (resource != null) {
+                        icon = new ImageIcon(resource);
+                        System.out.println("Successfully loaded enemy image from resources: " + path);
+                        break;
+                    }
+                }
+                
+                // If resource loading failed, try to load from current directory
+                if (icon == null) {
+                    File file = new File(filename);
+                    if (file.exists()) {
+                        icon = new ImageIcon(filename);
+                        System.out.println("Successfully loaded enemy image from file: " + filename);
+                    } else {
+                        // Try alternative file paths
+                        String[] alternatives = {
+                            filename.replace("resources/", ""),
+                            "Image/" + filename.substring(filename.lastIndexOf("/") + 1),
+                            "resources/Image/" + filename.substring(filename.lastIndexOf("/") + 1),
+                            filename.replace("/", "\\")
+                        };
+                        
+                        for (String alt : alternatives) {
+                            File altFile = new File(alt);
+                            if (altFile.exists()) {
+                                icon = new ImageIcon(alt);
+                                System.out.println("Successfully loaded enemy image from file: " + alt);
+                                break;
+                            }
                         }
                     }
                 }
@@ -629,10 +656,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 // Use the same size as the pet for consistency
                 Image scaledImg = img.getScaledInstance(DEFAULT_WIDTH, DEFAULT_HEIGHT, Image.SCALE_SMOOTH);
                 return new ImageIcon(scaledImg);
+            } else {
+                System.out.println("Failed to load enemy image: " + filename);
             }
             
         } catch (Exception e) {
-            // Silently fail for faster loading
+            System.out.println("Error loading enemy image " + filename + ": " + e.getMessage());
         }
         return null;
     }

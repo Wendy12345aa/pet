@@ -11,19 +11,18 @@ echo Creating DesktopPet.bat launcher...
 echo @echo off
 echo setlocal enabledelayedexpansion
 echo.
-echo set "APP_DIR=%%~dp0"
-echo set "JAR_FILE=%%APP_DIR%%lib\AdvancedDesktopPet.jar"
-echo set "JRE_DIR=%%APP_DIR%%jre"
+echo cd /d "%%~dp0"
+echo.
+echo set "JAVA_EXE=jre\bin\java.exe"
+echo set "JAR_FILE=lib\AdvancedDesktopPet.jar"
 echo.
 echo echo Desktop Pet Launcher
 echo echo ===================
 echo echo.
 echo.
-echo if exist "%%JRE_DIR%%\bin\java.exe" ^(
+echo if exist "%%JAVA_EXE%%" ^(
 echo     echo [INFO] Using embedded JRE - no Java installation required!
-echo     set "JAVA_HOME=%%JRE_DIR%%"
-echo     set "PATH=%%JAVA_HOME%%\bin;%%PATH%%"
-echo     "%%JAVA_HOME%%\bin\java" -jar "%%JAR_FILE%%"
+echo     "%%JAVA_EXE%%" -jar "%%JAR_FILE%%"
 echo ^) else ^(
 echo     echo [INFO] Checking for system Java...
 echo     java -version ^>nul 2^>^&1
