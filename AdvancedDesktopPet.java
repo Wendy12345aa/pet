@@ -11,6 +11,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.Dictionary;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.sound.sampled.*;
@@ -42,7 +43,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private int walkAnimationFrame = 0; // For leg animation sync
     
     // Behaviors
-    private int currentBehavior = 1; // 0=idle, 1=walking, 2=special - Start in active mode
+    private int currentBehavior = 1; // 0=idle, 1=walking, 2=special, 3=pain - Start in active mode
+    
+    // Character Set Integration
+    private CharacterSetManager characterSetManager;
+    private Timer multiFrameAnimationTimer;
+    private boolean isPainAnimationActive = false;
     
     // Safety timer to check if pet is lost
     private Timer safetyTimer;
@@ -56,6 +62,10 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private Random enemyRandom = new Random();
     private int maxEnemies = 5; // Increased from 3 to 5
     
+    // Independent enemy sizing (no longer proportional)
+    public int enemyWidth = DEFAULT_WIDTH;
+    public int enemyHeight = DEFAULT_HEIGHT;
+    
     // Tray
     private SystemTray systemTray;
     private TrayIcon trayIcon;
@@ -68,6 +78,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private JFrame settingsWindow = null;
     private boolean allowCrossScreen = false; // Allow movement between screens
     private JWindow floatingShortcut = null; // Cyberpunk floating shortcut
+    private CharacterImportWindow characterImportWindow = null;
     
     // Language support
     private boolean isChinese = false; // false = English, true = Chinese
@@ -87,6 +98,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private JLabel petCountLabel;
     private JLabel enemyInfoLabel;
     private JLabel maxEnemiesLabel;
+    private JLabel characterSectionLabel;
     private JButton englishBtn;
     private JButton chineseBtn;
     private JButton duplicateBtn;
@@ -101,6 +113,9 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private JButton forceCleanupBtn;
     private JButton closeBtn;
     private JButton exitBtn;
+    private JButton debugBtn;
+    private JButton importCharacterBtn;
+    private JButton switchCharacterBtn;
     private JCheckBox crossScreenBox;
     private JCheckBox musicBox;
     private JCheckBox enemyBox;
@@ -157,7 +172,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         loadingPanel.setOpaque(false);
         
         // Loading text
-        loadingLabel = new JLabel("Loading Ayano...", JLabel.CENTER);
+        loadingLabel = new JLabel("Loading Pet...", JLabel.CENTER);
         loadingLabel.setFont(new Font("Arial", Font.BOLD, 18));
         loadingLabel.setForeground(new Color(0, 255, 255));
         loadingLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
@@ -228,7 +243,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 e.printStackTrace();
                 SwingUtilities.invokeLater(() -> {
                     hideLoadingScreen();
-                    JOptionPane.showMessageDialog(null, "Error loading Ayano: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(null, "Error loading Pet: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 });
             }
         }).start();
@@ -253,14 +268,14 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     
     private void initializeLanguages() {
         // Initialize English texts
-        englishTexts.put("settings_title", "Desktop Ayano Settings");
-        englishTexts.put("pet_management", "Ayano Management");
-        englishTexts.put("duplicate_pet", "Duplicate Ayano");
-        englishTexts.put("remove_pet", "Remove Ayano");
-        englishTexts.put("active_pets", "Active Ayanos");
+        englishTexts.put("settings_title", "Desktop Pet Settings");
+        englishTexts.put("pet_management", "Pet Management");
+        englishTexts.put("duplicate_pet", "Duplicate Pet");
+        englishTexts.put("remove_pet", "Remove Pet");
+        englishTexts.put("active_pets", "Active Pets");
         englishTexts.put("transparency", "Transparency");
-        englishTexts.put("hide_pet", "Hide Ayano");
-        englishTexts.put("show_all_pets", "Show All Ayanos");
+        englishTexts.put("hide_pet", "Hide Pet");
+        englishTexts.put("show_all_pets", "Show All Pets");
         englishTexts.put("size", "Size");
         englishTexts.put("zoom_in", "Zoom In");
         englishTexts.put("zoom_out", "Zoom Out");
@@ -283,16 +298,20 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         englishTexts.put("close_window", "Close");
         englishTexts.put("exit_program", "Exit Program");
         englishTexts.put("confirm_exit", "Are you sure you want to exit the program?");
+        englishTexts.put("character_section", "Character Import");
+        englishTexts.put("import_character", "Import Characters");
+        englishTexts.put("switch_character", "Switch Character");
+        englishTexts.put("Debug_Enemy_Count", "Debug Enemy Count");
         
         // Initialize Chinese texts
-        chineseTexts.put("settings_title", "\u684c\u9762\u963f\u591c\u8bbe\u7f6e");
-        chineseTexts.put("pet_management", "\u963f\u591c\u7ba1\u7406");
-        chineseTexts.put("duplicate_pet", "\u590d\u5236\u963f\u591c");
-        chineseTexts.put("remove_pet", "\u5220\u9664\u963f\u591c");
-        chineseTexts.put("active_pets", "\u6d3b\u8dc3\u7684\u963f\u591c");
+        chineseTexts.put("settings_title", "\u684c\u9762\u684c\u5ba0\u8bbe\u7f6e");
+        chineseTexts.put("pet_management", "\u684c\u5ba0\u7ba1\u7406");
+        chineseTexts.put("duplicate_pet", "\u590d\u5236\u684c\u5ba0");
+        chineseTexts.put("remove_pet", "\u5220\u9664\u684c\u5ba0");
+        chineseTexts.put("active_pets", "\u6d3b\u8dc3\u7684\u684c\u5ba0");
         chineseTexts.put("transparency", "\u900f\u660e\u5ea6");
-        chineseTexts.put("hide_pet", "\u9690\u85cf\u963f\u591c");
-        chineseTexts.put("show_all_pets", "\u663e\u793a\u6240\u6709\u963f\u591c");
+        chineseTexts.put("hide_pet", "\u9690\u85cf\u684c\u5ba0");
+        chineseTexts.put("show_all_pets", "\u663e\u793a\u6240\u6709\u684c\u5ba0");
         chineseTexts.put("size", "\u5927\u5c0f");
         chineseTexts.put("zoom_in", "\u653e\u5927");
         chineseTexts.put("zoom_out", "\u7f29\u5c0f");
@@ -315,6 +334,10 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         chineseTexts.put("close_window", "\u5173\u95ed\u7a97\u53e3");
         chineseTexts.put("exit_program", "\u9000\u51fa\u7a0b\u5e8f");
         chineseTexts.put("confirm_exit", "\u60a8\u786e\u5b9a\u8981\u9000\u51fa\u7a0b\u5e8f\u5417\uff1f");
+        chineseTexts.put("character_section", "\u89d2\u8272\u5bfc\u5165");
+        chineseTexts.put("import_character", "\u5bfc\u5165\u89d2\u8272");
+        chineseTexts.put("switch_character", "\u5207\u6362\u89d2\u8272");
+        chineseTexts.put("Debug_Enemy_Count", "\u6e05\u9664\u654c\u4eba");
     }
     
     private String getText(String key) {
@@ -440,6 +463,18 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         if (horrorSectionLabel != null) {
             horrorSectionLabel.setText(getText("horror_mode"));
         }
+        if (debugBtn != null) {
+            debugBtn.setText(getText("Debug_Enemy_Count"));
+        }
+        if (characterSectionLabel != null) {
+            characterSectionLabel.setText(getText("character_section"));
+        }
+        if (importCharacterBtn != null) {
+            importCharacterBtn.setText(getText("import_character"));
+        }
+        if (switchCharacterBtn != null) {
+            switchCharacterBtn.setText(getText("switch_character"));
+        }
     }
     
     private void initializePet() {
@@ -492,6 +527,136 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         System.out.println("Loading animations...");
         specialAnimations = new ArrayList<>();
         
+        // Initialize character set manager
+        characterSetManager = CharacterSetManager.getInstance();
+        
+        // Load from character set or fallback to legacy loading
+        if (loadFromCharacterSet()) {
+            System.out.println("Loaded animations from character set");
+        } else {
+            System.out.println("Loading legacy animations");
+            loadLegacyAnimations();
+        }
+        
+        // Load enemy images
+        System.out.println("About to load enemy images...");
+        loadEnemyImages();
+        
+        // Initialize multi-frame animation timer
+        initializeMultiFrameAnimationTimer();
+        
+        // Set initial animation
+        SwingUtilities.invokeLater(() -> updateIdleSprite());
+    }
+    
+    /**
+     * Load animations from current character set
+     */
+    private boolean loadFromCharacterSet() {
+        try {
+            CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
+            if (currentSet == null || !currentSet.isComplete()) {
+                return false;
+            }
+            
+            // First, determine the optimal size for the character set
+            autoResizeForCharacterSet(currentSet);
+            
+            // Load idle animation
+            AnimationSequence idleSeq = currentSet.getIdleAnimation();
+            if (idleSeq.getFrameCount() > 0) {
+                idleGif = idleSeq.getCurrentFrame().getImage();
+            }
+            
+            // Load walking animation
+            AnimationSequence walkingSeq = currentSet.getWalkingAnimation();
+            if (walkingSeq.getFrameCount() > 0) {
+                walkGif = walkingSeq.getCurrentFrame().getImage();
+            }
+            
+            // Load special animation
+            specialAnimations.clear();
+            AnimationSequence specialSeq = currentSet.getSpecialAnimation();
+            if (specialSeq.getFrameCount() > 0) {
+                for (AnimationFrame frame : specialSeq.getFrames()) {
+                    specialAnimations.add(frame.getImage());
+                }
+            }
+            
+            // Pain animation will be handled separately when triggered
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.out.println("Error loading from character set: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Auto-resize pet window to fit character set images
+     */
+    private void autoResizeForCharacterSet(CharacterSet characterSet) {
+        try {
+            int maxWidth = DEFAULT_WIDTH;
+            int maxHeight = DEFAULT_HEIGHT;
+            
+            // Check all animation sequences to find the largest image dimensions
+            AnimationSequence[] sequences = {
+                characterSet.getIdleAnimation(),
+                characterSet.getWalkingAnimation(),
+                characterSet.getSpecialAnimation(),
+                characterSet.getPainAnimation()
+            };
+            
+            for (AnimationSequence sequence : sequences) {
+                if (sequence != null && sequence.getFrameCount() > 0) {
+                    for (AnimationFrame frame : sequence.getFrames()) {
+                        if (frame.getImage() != null) {
+                            int imageWidth = frame.getImage().getIconWidth();
+                            int imageHeight = frame.getImage().getIconHeight();
+                            
+                            if (imageWidth > maxWidth) maxWidth = imageWidth;
+                            if (imageHeight > maxHeight) maxHeight = imageHeight;
+                        }
+                    }
+                }
+            }
+            
+            // Only resize if we found larger images
+            if (maxWidth > petWidth || maxHeight > petHeight) {
+                System.out.println("Auto-resizing pet window from " + petWidth + "x" + petHeight + 
+                                 " to " + maxWidth + "x" + maxHeight + " to fit character set images");
+                
+                petWidth = maxWidth;
+                petHeight = maxHeight;
+                
+                // Update window and label size
+                setSize(petWidth, petHeight);
+                if (petLabel != null) {
+                    petLabel.setBounds(0, 0, petWidth, petHeight);
+                    petLabel.setPreferredSize(new Dimension(petWidth, petHeight));
+                }
+                
+                // Update all enemies' size to match
+                for (EnemyWindow enemy : enemies) {
+                    enemy.updateFromPetSettings();
+                }
+                
+                // Force repaint
+                revalidate();
+                repaint();
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Error auto-resizing for character set: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Fallback to legacy animation loading
+     */
+    private void loadLegacyAnimations() {
         // Try to load PNG files from Image folder first
         idleGif = loadImageSafely("Image/chibi01.png");
         walkGif = loadImageSafely("Image/chibi02.png");
@@ -532,13 +697,190 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             specialAnimations.add(createDefaultAnimation(new Color(150, 150, 255, 200), "*"));
             specialAnimations.add(createDefaultAnimation(new Color(255, 150, 255, 200), "~"));
         }
+    }
+    
+    /**
+     * Initialize timer for multi-frame animations
+     */
+    private void initializeMultiFrameAnimationTimer() {
+        multiFrameAnimationTimer = new Timer(150, e -> updateMultiFrameAnimation());
+        // Don't start automatically - will be started when needed
+    }
+    
+    /**
+     * Update multi-frame animation for character sets
+     */
+    private void updateMultiFrameAnimation() {
+        try {
+            CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
+            if (currentSet == null) return;
+            
+            AnimationSequence currentSequence = null;
+            
+            // Determine which animation sequence to use
+            if (isPainAnimationActive) {
+                currentSequence = currentSet.getPainAnimation();
+                // If pain animation is missing, fall back to idle
+                if (currentSequence.getFrameCount() == 0) {
+                    currentSequence = currentSet.getIdleAnimation();
+                }
+            } else if (currentBehavior == 0) { // idle
+                currentSequence = currentSet.getIdleAnimation();
+            } else if (currentBehavior == 1) { // walking
+                currentSequence = currentSet.getWalkingAnimation();
+            } else if (currentBehavior == 2) { // special
+                currentSequence = currentSet.getSpecialAnimation();
+                // If special animation is missing, fall back to idle
+                if (currentSequence.getFrameCount() == 0) {
+                    currentSequence = currentSet.getIdleAnimation();
+                }
+            }
+            
+            if (currentSequence != null && currentSequence.getFrameCount() > 0) {
+                AnimationFrame nextFrame = currentSequence.nextFrame();
+                if (nextFrame != null) {
+                    ImageIcon frameImage = nextFrame.getImage();
+                    if (frameImage != null) {
+                        // Apply horizontal flip if needed
+                        ImageIcon displayImage = facingRight ? frameImage : getFlippedIcon(frameImage);
+                        petLabel.setIcon(displayImage);
+                        
+                        // Update timer delay based on frame duration
+                        multiFrameAnimationTimer.setDelay(nextFrame.getDuration());
+                    }
+                }
+            }
+            
+        } catch (Exception ex) {
+            System.out.println("Error in multi-frame animation update: " + ex.getMessage());
+        }
+    }
+    
+    /**
+     * Start pain animation
+     */
+    public void startPainAnimation() {
+        if (isPainAnimationActive) return; // Already in pain animation
         
-        // Load enemy images
-        System.out.println("About to load enemy images...");
-        loadEnemyImages();
+        isPainAnimationActive = true;
+        System.out.println("Starting pain animation");
         
-        // Set initial animation
-        SwingUtilities.invokeLater(() -> updateIdleSprite());
+        // Stop current animation timers
+        if (animationTimer != null && animationTimer.isRunning()) {
+            animationTimer.stop();
+        }
+        
+        // Start multi-frame animation for pain
+        if (multiFrameAnimationTimer != null) {
+            CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
+            if (currentSet != null) {
+                if (currentSet.getPainAnimation().getFrameCount() > 0) {
+                    currentSet.getPainAnimation().reset(); // Reset to first frame
+                    multiFrameAnimationTimer.start();
+                } else {
+                    // No pain animation available, just use idle animation during pain
+                    System.out.println("No pain animation available, using idle animation");
+                    currentSet.getIdleAnimation().reset();
+                    multiFrameAnimationTimer.start();
+                }
+                
+                // Auto-stop pain animation after duration
+                Timer painDurationTimer = new Timer(2000, e -> {
+                    stopPainAnimation();
+                    ((Timer) e.getSource()).stop();
+                });
+                painDurationTimer.start();
+            }
+        }
+    }
+    
+    /**
+     * Stop pain animation and return to normal
+     */
+    public void stopPainAnimation() {
+        if (!isPainAnimationActive) return;
+        
+        isPainAnimationActive = false;
+        System.out.println("Stopping pain animation");
+        
+        // Stop multi-frame timer
+        if (multiFrameAnimationTimer != null && multiFrameAnimationTimer.isRunning()) {
+            multiFrameAnimationTimer.stop();
+        }
+        
+        // Resume normal animation
+        if (animationTimer != null && !animationTimer.isRunning()) {
+            animationTimer.start();
+        }
+        
+        // Update to current behavior sprite
+        updateCurrentBehaviorSprite();
+    }
+    
+    /**
+     * Update sprite based on current behavior
+     */
+    public void updateCurrentBehaviorSprite() {
+        switch (currentBehavior) {
+            case 0:
+                updateIdleSprite();
+                break;
+            case 1:
+                updateWalkingSprite();
+                break;
+            case 2:
+                // Special animation will be handled by playSpecialAnimation
+                break;
+            default:
+                updateIdleSprite();
+                break;
+        }
+    }
+    
+    /**
+     * Switch to a different character set
+     */
+    public void switchCharacterSet(String setName, boolean isPet) {
+        try {
+            if (isPet) {
+                characterSetManager.setCurrentPetCharacterSet(setName);
+                
+                // Reload animations with new character set (this will auto-resize if needed)
+                loadAnimations();
+                
+                // Update current sprite
+                updateCurrentBehaviorSprite();
+            } else {
+                characterSetManager.setCurrentEnemyCharacterSet(setName);
+                
+                // Enemy size is now independent, no recalculation needed
+                
+                // Reload enemy images with new character set (at proportional size)
+                loadEnemyImagesFromCharacterSet();
+                
+                // Update all existing enemies with new images
+                updateExistingEnemiesWithNewImages();
+            }
+            
+            System.out.println("Switched to character set: " + setName + " (Pet: " + isPet + ")");
+            
+        } catch (Exception e) {
+            System.out.println("Error switching character set: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Public method to reload animations (for external classes like import window)
+     */
+    public void reloadAnimations() {
+        loadAnimations();
+    }
+    
+    /**
+     * Get all active pets (for external classes)
+     */
+    public static List<AdvancedDesktopPet> getAllPets() {
+        return allPets;
     }
     
 
@@ -596,6 +938,116 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         }
     }
     
+    /**
+     * Load enemy images from current character set
+     */
+    private void loadEnemyImagesFromCharacterSet() {
+        System.out.println("Loading enemy images from character set...");
+        System.out.println("Current pet size: " + petWidth + "x" + petHeight);
+        enemyImages.clear();
+        
+        CharacterSet currentEnemySet = characterSetManager.getCurrentEnemyCharacterSet();
+        System.out.println("Current enemy character set: " + (currentEnemySet != null ? currentEnemySet.getName() : "null"));
+        
+        if (currentEnemySet != null && !currentEnemySet.getName().equals("default")) {
+            // Load from character set animations
+            if (currentEnemySet.getIdleAnimation().getFrameCount() > 0) {
+                for (AnimationFrame frame : currentEnemySet.getIdleAnimation().getFrames()) {
+                    if (frame.getOriginalImage() != null) {
+                                            // Scale enemy image to independent size
+                    Image img = frame.getOriginalImage().getImage();
+                    Image scaledImg = img.getScaledInstance(enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                    enemyImages.add(new ImageIcon(scaledImg));
+                    System.out.println("Scaled enemy idle frame to " + enemyWidth + "x" + enemyHeight);
+                    }
+                }
+            }
+            
+            // Also add walking animation frames if available
+            if (currentEnemySet.getWalkingAnimation().getFrameCount() > 0) {
+                for (AnimationFrame frame : currentEnemySet.getWalkingAnimation().getFrames()) {
+                    if (frame.getOriginalImage() != null) {
+                        // Scale enemy image to independent size
+                        Image img = frame.getOriginalImage().getImage();
+                        Image scaledImg = img.getScaledInstance(enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                        enemyImages.add(new ImageIcon(scaledImg));
+                        System.out.println("Scaled enemy walking frame to " + enemyWidth + "x" + enemyHeight);
+                    }
+                }
+            }
+            
+            // Add special animation frames if available
+            if (currentEnemySet.getSpecialAnimation().getFrameCount() > 0) {
+                for (AnimationFrame frame : currentEnemySet.getSpecialAnimation().getFrames()) {
+                    if (frame.getOriginalImage() != null) {
+                        // Scale enemy image to independent size
+                        Image img = frame.getOriginalImage().getImage();
+                        Image scaledImg = img.getScaledInstance(enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                        enemyImages.add(new ImageIcon(scaledImg));
+                        System.out.println("Scaled enemy special frame to " + enemyWidth + "x" + enemyHeight);
+                    }
+                }
+            }
+            
+            // Add pain animation frames if available
+            if (currentEnemySet.getPainAnimation().getFrameCount() > 0) {
+                for (AnimationFrame frame : currentEnemySet.getPainAnimation().getFrames()) {
+                    if (frame.getOriginalImage() != null) {
+                        // Scale enemy image to independent size
+                        Image img = frame.getOriginalImage().getImage();
+                        Image scaledImg = img.getScaledInstance(enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                        enemyImages.add(new ImageIcon(scaledImg));
+                        System.out.println("Scaled enemy pain frame to " + enemyWidth + "x" + enemyHeight);
+                    }
+                }
+            }
+        }
+        
+        // Fallback to default enemy loading if no character set images
+        if (enemyImages.isEmpty()) {
+            System.out.println("No character set enemy images found, falling back to default loading");
+            loadEnemyImages();
+        } else {
+            System.out.println("Loaded " + enemyImages.size() + " enemy images from character set: " + currentEnemySet.getName() + " at independent size " + enemyWidth + "x" + enemyHeight);
+        }
+    }
+    
+    /**
+     * Update all existing enemies with new images after character set switch
+     */
+    private void updateExistingEnemiesWithNewImages() {
+        if (enemies.isEmpty() || enemyImages.isEmpty()) {
+            return;
+        }
+        
+        System.out.println("Updating " + enemies.size() + " existing enemies with new character set images");
+        
+        // Update each enemy with new images
+        for (EnemyWindow enemy : enemies) {
+            try {
+                // Update the enemy's image list and refresh its appearance
+                enemy.updateEnemyImages(enemyImages);
+            } catch (Exception e) {
+                System.out.println("Error updating enemy with new images: " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Calculate enemy-to-pet size ratio based on original image dimensions
+     */
+    /**
+     * Set default enemy size based on current pet size when first enabled
+     */
+    private void initializeEnemySize() {
+        // Only set default enemy size if it hasn't been set yet
+        if (enemyWidth == DEFAULT_WIDTH && enemyHeight == DEFAULT_HEIGHT) {
+            enemyWidth = petWidth;
+            enemyHeight = petHeight;
+            System.out.println("Initialized enemy size to current pet size: " + enemyWidth + "x" + enemyHeight);
+        }
+    }
+    
     private ImageIcon loadEnemyImageSafely(String filename) {
         try {
             // First try to load from resources
@@ -625,36 +1077,36 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 // If resource loading failed, try to load from current directory
                 if (icon == null) {
-                    File file = new File(filename);
-                    if (file.exists()) {
-                        icon = new ImageIcon(filename);
+                File file = new File(filename);
+                if (file.exists()) {
+                    icon = new ImageIcon(filename);
                         System.out.println("Successfully loaded enemy image from file: " + filename);
-                    } else {
+                } else {
                         // Try alternative file paths
-                        String[] alternatives = {
+                    String[] alternatives = {
                             filename.replace("resources/", ""),
                             "Image/" + filename.substring(filename.lastIndexOf("/") + 1),
                             "resources/Image/" + filename.substring(filename.lastIndexOf("/") + 1),
                             filename.replace("/", "\\")
-                        };
-                        
-                        for (String alt : alternatives) {
-                            File altFile = new File(alt);
-                            if (altFile.exists()) {
-                                icon = new ImageIcon(alt);
+                    };
+                    
+                    for (String alt : alternatives) {
+                        File altFile = new File(alt);
+                        if (altFile.exists()) {
+                            icon = new ImageIcon(alt);
                                 System.out.println("Successfully loaded enemy image from file: " + alt);
-                                break;
+                            break;
                             }
                         }
                     }
                 }
             }
             
-            // Scale the enemy image to match pet size
+            // Scale the enemy image to independent size
             if (icon != null && icon.getIconWidth() > 0 && icon.getIconHeight() > 0) {
                 Image img = icon.getImage();
-                // Use the same size as the pet for consistency
-                Image scaledImg = img.getScaledInstance(DEFAULT_WIDTH, DEFAULT_HEIGHT, Image.SCALE_SMOOTH);
+                Image scaledImg = img.getScaledInstance(enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                System.out.println("Scaled legacy enemy image to " + enemyWidth + "x" + enemyHeight);
                 return new ImageIcon(scaledImg);
             } else {
                 System.out.println("Failed to load enemy image: " + filename);
@@ -667,17 +1119,18 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private ImageIcon createDefaultEnemyAnimation(Color color, String emoji) {
-        BufferedImage image = new BufferedImage(DEFAULT_WIDTH, DEFAULT_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+        // Use independent enemy size for default enemy
+        BufferedImage image = new BufferedImage(enemyWidth, enemyHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = image.createGraphics();
         
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         
-        // Draw scary circle background - scale proportionally
+        // Draw scary circle background - scale to enemy size
         g2d.setColor(color);
-        int circleSize = Math.min(DEFAULT_WIDTH, DEFAULT_HEIGHT) - 20;
-        int circleX = (DEFAULT_WIDTH - circleSize) / 2;
-        int circleY = (DEFAULT_HEIGHT - circleSize) / 2;
+        int circleSize = Math.min(enemyWidth, enemyHeight) - 20;
+        int circleX = (enemyWidth - circleSize) / 2;
+        int circleY = (enemyHeight - circleSize) / 2;
         g2d.fillOval(circleX, circleY, circleSize, circleSize);
         
         // Add darker border for scary effect
@@ -685,17 +1138,18 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         g2d.setStroke(new BasicStroke(3));
         g2d.drawOval(circleX, circleY, circleSize, circleSize);
         
-        // Draw scary emoji - scale font proportionally
+        // Draw scary emoji - scale font to enemy size
         Font font = new Font("Segoe UI Emoji", Font.PLAIN, circleSize / 2);
         g2d.setFont(font);
         g2d.setColor(Color.WHITE);
         
         FontMetrics fm = g2d.getFontMetrics();
-        int textX = (DEFAULT_WIDTH - fm.stringWidth(emoji)) / 2;
-        int textY = (DEFAULT_HEIGHT + fm.getAscent()) / 2;
+        int textX = (enemyWidth - fm.stringWidth(emoji)) / 2;
+        int textY = (enemyHeight + fm.getAscent()) / 2;
         g2d.drawString(emoji, textX, textY);
         
         g2d.dispose();
+        System.out.println("Created default enemy animation at independent size " + enemyWidth + "x" + enemyHeight);
         return new ImageIcon(image);
     }
     
@@ -867,12 +1321,13 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         animationTimer = new Timer(ANIMATION_DELAY, e -> updateAnimation());
         animationTimer.start();
         
-        // Movement timer
-        movementTimer = new Timer(3000 + random.nextInt(5000), e -> {
-            if (!isDragging && currentBehavior == 1) {
+        // Movement timer - more frequent to keep pet active
+        movementTimer = new Timer(2000 + random.nextInt(3000), e -> {
+            if (!isDragging && currentBehavior == 1 && !isWalking) {
+                System.out.println("Movement timer triggered - starting random walk");
                 startRandomWalk();
             }
-            movementTimer.setDelay(3000 + random.nextInt(5000));
+            movementTimer.setDelay(2000 + random.nextInt(3000));
         });
         movementTimer.start();
         
@@ -885,8 +1340,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         });
         behaviorTimer.start();
         
-        // Safety timer to check if pet is lost or stuck
-        safetyTimer = new Timer(12000, e -> {
+        // Safety timer to check if pet is lost or stuck - check every 5 seconds
+        safetyTimer = new Timer(5000, e -> {
             checkAndFixPetLocation();
         });
         safetyTimer.start();
@@ -895,6 +1350,15 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         if (enemyEnabled) {
             startEnemySystem();
         }
+        
+        // Add a movement watchdog timer to ensure pet keeps moving
+        Timer movementWatchdog = new Timer(10000, e -> {
+            if (!isDragging && !isWalking && currentBehavior == 1) {
+                System.out.println("Movement watchdog: Pet hasn't moved for 10 seconds - forcing movement");
+                startRandomWalk();
+            }
+        });
+        movementWatchdog.start();
     }
     
     private void startEnemySystem() {
@@ -927,6 +1391,10 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             }
         });
         enemyCleanupTimer.start();
+        
+        // Initialize enemy size and load enemy images before spawning
+        initializeEnemySize();
+        loadEnemyImagesFromCharacterSet();
         
         // Spawn initial enemy after a delay
         Timer initialSpawnTimer = new Timer(3000, e -> {
@@ -1034,6 +1502,11 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private void spawnEnemy() {
+        if (!enemyEnabled) {
+            System.out.println("Cannot spawn enemy: Enemy system is disabled. Enable it in Settings > Horror Mode > Enable Enemies");
+            return;
+        }
+        
         if (enemies.size() >= maxEnemies || enemyImages.isEmpty()) {
             System.out.println("Cannot spawn enemy: " + enemies.size() + "/" + maxEnemies + " enemies, " + 
                              (enemyImages.isEmpty() ? "no images" : "images available"));
@@ -1614,23 +2087,30 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         if (lastKnownLocation != null) {
             double distance = currentLocation.distance(lastKnownLocation);
             
-            // If pet hasn't moved much and isn't being dragged and isn't walking
-            if (distance < 5 && !isDragging && !isWalking) {
+            // If pet hasn't moved much and isn't being dragged
+            if (distance < 5 && !isDragging) {
                 stuckCounter++;
                 
-                // If stuck for more than 6 safety checks (30 seconds), help it
-                if (stuckCounter >= 6) {
+                // If stuck for more than 2 safety checks (10 seconds), help it
+                if (stuckCounter >= 2) {
                     System.out.println("Pet appears to be idle for too long! Encouraging movement...");
                     
-                    // Don't force rescue, just encourage new movement
-                    if (currentBehavior == 1) { // Only if in active mode
+                    // Force movement based on current behavior
+                    if (currentBehavior == 1) {
+                        // Pet should be walking - restart movement
+                        System.out.println("Pet should be walking but appears stuck - restarting movement");
+                        startRandomWalk();
+                    } else if (currentBehavior == 0) {
+                        // Pet is idle - change to walking mode
+                        System.out.println("Pet is idle - changing to walking mode");
+                        currentBehavior = 1;
                         startRandomWalk();
                     }
                     
                     stuckCounter = 0; // Reset counter
                 }
             } else {
-                stuckCounter = 0; // Reset if pet is moving or walking
+                stuckCounter = 0; // Reset if pet is moving
             }
         }
         
@@ -1740,6 +2220,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private void startRandomWalk() {
         if (isDragging) return;
         
+        System.out.println("Starting random walk for pet...");
+        
         if (allowCrossScreen) {
             // Select a random valid screen first, then pick target on that screen
             selectTargetOnRandomScreen();
@@ -1763,6 +2245,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         isWalking = true;
         walkAnimationFrame = 0;
         
+        System.out.println("Movement target set to: (" + targetX + ", " + targetY + ")");
+        
         // Determine direction and flip image if needed
         Point current = getLocation();
         boolean shouldFaceRight = targetX > current.x;
@@ -1782,9 +2266,22 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 int dy = targetY - current.y;
                 
                 if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
+                    System.out.println("Pet reached target, stopping movement");
                     isWalking = false;
                     updateIdleSprite();
                     ((Timer) e.getSource()).stop();
+                    
+                    // Schedule next movement automatically if in walking behavior - shorter delay
+                    if (currentBehavior == 1 && !isDragging) {
+                        Timer nextMovementTimer = new Timer(1000 + random.nextInt(2000), evt -> {
+                            if (!isDragging && currentBehavior == 1) {
+                                System.out.println("Auto-starting next movement after reaching target");
+                                startRandomWalk();
+                            }
+                            ((Timer) evt.getSource()).stop();
+                        });
+                        nextMovementTimer.start();
+                    }
                     return;
                 }
                 
@@ -1815,10 +2312,21 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 setLocation(safeNewLocation);
                 
-                // Update walking animation frame for leg sync
+                // Update walking animation frame for leg sync (for legacy animations only)
                 walkAnimationFrame = (walkAnimationFrame + 1) % 8;
+                
+                // Only update walking sprite for legacy animations (character sets handle their own timing)
+                CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
+                if (currentSet == null || currentSet.getWalkingAnimation().getFrameCount() == 0) {
+                    // Legacy animation - update sprite every 4 frames for leg movement
                 if (walkAnimationFrame % 4 == 0) {
-                    updateWalkingSprite(); // Update sprite every 4 frames for leg movement
+                        updateWalkingSprite();
+                    }
+                } else {
+                    // Character set animations are handled by the multi-frame animation timer
+                    if (walkAnimationFrame % 20 == 0) { // Debug every 20 frames to avoid spam
+                        System.out.println("Using character set animation for movement (frame " + walkAnimationFrame + ")");
+                    }
                 }
             }
         });
@@ -1992,12 +2500,54 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private void updateWalkingSprite() {
+        // Check if we have character sets available for multi-frame animation
+        CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
+        if (currentSet != null && currentSet.getWalkingAnimation().getFrameCount() > 0) {
+            // Use character set multi-frame animation
+            if (!multiFrameAnimationTimer.isRunning() && isWalking) {
+                currentSet.getWalkingAnimation().reset();
+                multiFrameAnimationTimer.start();
+                System.out.println("Started multi-frame walking animation for character set: " + currentSet.getName());
+            } else if (multiFrameAnimationTimer.isRunning() && !isWalking) {
+                // Stop animation if we're not walking anymore
+                multiFrameAnimationTimer.stop();
+                System.out.println("Stopped multi-frame walking animation (not walking anymore)");
+            }
+            // If timer is already running and we're walking, don't restart it
+        } else {
+            // Fall back to legacy animation system
+            System.out.println("Using legacy animation for walking (currentSet: " + 
+                             (currentSet != null ? currentSet.getName() + " with " + currentSet.getWalkingAnimation().getFrameCount() + " frames" : "null") + ")");
         ImageIcon sprite = (walkAnimationFrame % 8 < 4) ? walkGif : idleGif; // Alternate between walk and idle for leg movement
         petLabel.setIcon(getFlippedIcon(sprite));
+        }
     }
     
     private void updateIdleSprite() {
+        // Only stop multi-frame animation if we're actually going to idle (not walking)
+        if (multiFrameAnimationTimer.isRunning() && !isWalking && !isPainAnimationActive) {
+            multiFrameAnimationTimer.stop();
+            System.out.println("Stopped multi-frame animation");
+        }
+        
+        // Only update idle sprite if we're actually idle (not walking and not in pain)
+        if (!isWalking && !isPainAnimationActive) {
+            // Check if we have character sets available
+            CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
+            if (currentSet != null && currentSet.getIdleAnimation().getFrameCount() > 0) {
+                // Use character set idle animation
+                AnimationFrame idleFrame = currentSet.getIdleAnimation().getCurrentFrame();
+                if (idleFrame != null) {
+                    petLabel.setIcon(getFlippedIcon(idleFrame.getImage()));
+                } else {
+                    // Fallback to legacy
         petLabel.setIcon(getFlippedIcon(idleGif));
+                }
+            } else {
+                // Fall back to legacy animation system
+                petLabel.setIcon(getFlippedIcon(idleGif));
+            }
+        }
     }
     
     private ImageIcon getFlippedIcon(ImageIcon original) {
@@ -2018,6 +2568,34 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private void playSpecialAnimation() {
+        // Check if we have character sets available
+        CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
+        if (currentSet != null && currentSet.getSpecialAnimation().getFrameCount() > 0) {
+            // Use character set special animation
+            currentBehavior = 2; // Set to special behavior
+            
+            // Stop current animation and start special animation
+            if (multiFrameAnimationTimer.isRunning()) {
+                multiFrameAnimationTimer.stop();
+            }
+            
+            currentSet.getSpecialAnimation().reset();
+            multiFrameAnimationTimer.start();
+            
+            // Auto-return to idle after special animation
+            Timer resetTimer = new Timer(2000, e -> {
+                currentBehavior = 0; // Return to idle
+                updateIdleSprite();
+                ((Timer) e.getSource()).stop();
+            });
+            resetTimer.start();
+            
+        } else if (currentSet != null) {
+            // Character set exists but has no special animation - just briefly change to idle and back
+            System.out.println("Character set has no special animation, skipping...");
+            return; // Skip special animation entirely
+        } else {
+            // Fall back to legacy special animation
         if (specialAnimations.isEmpty()) return;
         
         ImageIcon special = specialAnimations.get(random.nextInt(specialAnimations.size()));
@@ -2030,6 +2608,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             ((Timer) e.getSource()).stop();
         });
         resetTimer.start();
+        }
     }
     
     @Override
@@ -2360,13 +2939,20 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         int centerY = screenBounds.y + (screenBounds.height - petHeight) / 2;
         setLocation(centerX, centerY);
         
-        // Update all enemies' size
+        // Reload and rescale images (both legacy and character sets)
+        reloadImagesWithNewSize();
+        rescaleCharacterSetImages();
+        
+        // Enemy size is now independent - no calculation needed
+        // Simply reload enemy images at their current independent size
+        loadEnemyImagesFromCharacterSet();
+        
+        // Update all enemies' size and give them new properly-sized images
         for (EnemyWindow enemy : enemies) {
             enemy.updateFromPetSettings();
+            // Also update enemy with newly-sized images
+            enemy.updateEnemyImages(enemyImages);
         }
-        
-        // Reload and rescale images
-        reloadImagesWithNewSize();
         
         // Stop current walking to prevent conflicts
         isWalking = false;
@@ -2375,6 +2961,29 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         // Force repaint to ensure proper display
         revalidate();
         repaint();
+    }
+    
+    private void updateEnemySize(int zoomPercent) {
+        // Calculate new enemy size based on percentage
+        int newEnemyWidth = (int) (DEFAULT_WIDTH * (zoomPercent / 100.0));
+        int newEnemyHeight = (int) (DEFAULT_HEIGHT * (zoomPercent / 100.0));
+        
+        System.out.println("Updating enemy size to " + zoomPercent + "% - " + newEnemyWidth + "x" + newEnemyHeight);
+        
+        // Update enemy size variables
+        enemyWidth = newEnemyWidth;
+        enemyHeight = newEnemyHeight;
+        
+        // Reload enemy images at new size
+        loadEnemyImagesFromCharacterSet();
+        
+        // Update all existing enemies with new size and images
+        for (EnemyWindow enemy : enemies) {
+            enemy.updateFromPetSettings();
+            enemy.updateEnemyImages(enemyImages);
+        }
+        
+        System.out.println("Enemy size updated successfully to " + enemyWidth + "x" + enemyHeight);
     }
     
     private void reloadImagesWithNewSize() {
@@ -2411,6 +3020,56 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 petLabel.repaint();
             }
         });
+    }
+    
+    /**
+     * Rescale character set images to match new pet size
+     */
+    private void rescaleCharacterSetImages() {
+        try {
+            CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
+            if (currentSet == null || !currentSet.isComplete()) {
+                return; // No character set to rescale
+            }
+            
+            System.out.println("Rescaling character set images to " + petWidth + "x" + petHeight);
+            
+            // Rescale all animation sequences
+            rescaleAnimationSequence(currentSet.getIdleAnimation());
+            rescaleAnimationSequence(currentSet.getWalkingAnimation());
+            rescaleAnimationSequence(currentSet.getSpecialAnimation());
+            rescaleAnimationSequence(currentSet.getPainAnimation());
+            
+            // Reload the animations into the main variables
+            loadFromCharacterSet();
+            
+        } catch (Exception e) {
+            System.out.println("Error rescaling character set images: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Rescale all frames in an animation sequence using original high-quality images
+     */
+    private void rescaleAnimationSequence(AnimationSequence sequence) {
+        if (sequence == null || sequence.getFrameCount() == 0) {
+            return;
+        }
+        
+        try {
+            // Scale each frame using its original image (preserves quality)
+            for (AnimationFrame frame : sequence.getFrames()) {
+                if (frame.getOriginalImage() != null) {
+                    frame.scaleToSize(petWidth, petHeight);
+                }
+            }
+            
+            // Reset sequence to first frame
+            sequence.reset();
+            
+        } catch (Exception e) {
+            System.out.println("Error rescaling animation sequence: " + e.getMessage());
+        }
     }
     
     private void exitApplication() {
@@ -2577,7 +3236,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         settingsWindow = new JFrame();
         settingsWindow.setTitle(getText("settings_title"));
         settingsWindow.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-        settingsWindow.setSize(600, 500);
+        settingsWindow.setSize(800, 900);
         settingsWindow.setResizable(false);
         settingsWindow.setLocationRelativeTo(null);
         settingsWindow.setUndecorated(true); // Remove default decorations
@@ -2592,21 +3251,21 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 // Dark background
                 GradientPaint bgGradient = new GradientPaint(0, 0, new Color(20, 20, 35), 
-                                                           600, 500, new Color(35, 20, 45));
+                                                           800, 900, new Color(35, 20, 45));
                 g2d.setPaint(bgGradient);
-                g2d.fillRect(0, 0, 600, 500);
+                g2d.fillRect(0, 0, 800, 900);
                 
                 // Border
                 g2d.setStroke(new BasicStroke(2));
                 g2d.setColor(new Color(80, 80, 120));
-                g2d.drawRect(1, 1, 598, 498);
+                g2d.drawRect(1, 1, 798, 898);
                 
                 // Title bar
                 g2d.setColor(new Color(60, 60, 100, 100));
-                g2d.fillRect(0, 0, 600, 30);
+                g2d.fillRect(0, 0, 800, 30);
                 g2d.setStroke(new BasicStroke(1));
                 g2d.setColor(new Color(100, 100, 140));
-                g2d.drawLine(0, 30, 600, 30);
+                g2d.drawLine(0, 30, 800, 30);
             }
         };
         
@@ -2615,13 +3274,13 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         // Title panel with minimize button
         JPanel titlePanel = createTitlePanel();
-        titlePanel.setPreferredSize(new Dimension(600, 30)); // Ensure it covers the top bar
+        titlePanel.setPreferredSize(new Dimension(800, 30)); // Ensure it covers the top bar
         
         // Content panel with grid layout
         JPanel contentPanel = new JPanel(new GridBagLayout());
         contentPanel.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 12, 8, 12);
+        gbc.insets = new Insets(15, 30, 15, 30); // Much more generous spacing
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
         // Language Section
@@ -2681,14 +3340,16 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
         gbc.weightx = 1.0;
+        gbc.insets = new Insets(10, 30, 20, 30); // Extra bottom spacing for sliders
         JSlider transparencySlider = createSlider(0, 100, (int)(transparency * 100));
-        transparencySlider.setPreferredSize(new Dimension(350, 40));
+        transparencySlider.setPreferredSize(new Dimension(500, 50));
         transparencySlider.addChangeListener(e -> {
             transparency = transparencySlider.getValue() / 100.0f;
             updateTransparency();
         });
         contentPanel.add(transparencySlider, gbc);
         gbc.weightx = 0;
+        gbc.insets = new Insets(15, 30, 15, 30); // Reset to normal spacing
         
         gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 1;
         hideBtn = createButton(getText("hide_pet"));
@@ -2708,14 +3369,16 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         gbc.gridx = 0; gbc.gridy = 9; gbc.gridwidth = 2;
         gbc.weightx = 1.0;
+        gbc.insets = new Insets(10, 30, 20, 30); // Extra bottom spacing for sliders
         JSlider zoomSlider = createSlider(50, 300, (int)((petWidth / (double)DEFAULT_WIDTH) * 100));
-        zoomSlider.setPreferredSize(new Dimension(350, 40));
+        zoomSlider.setPreferredSize(new Dimension(500, 50));
         zoomSlider.addChangeListener(e -> {
             int zoomPercent = zoomSlider.getValue();
             updateSize(zoomPercent);
         });
         contentPanel.add(zoomSlider, gbc);
         gbc.weightx = 0;
+        gbc.insets = new Insets(15, 30, 15, 30); // Reset to normal spacing
         
         gbc.gridx = 0; gbc.gridy = 10; gbc.gridwidth = 1;
         zoomInBtn = createButton(getText("zoom_in"));
@@ -2735,20 +3398,54 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         });
         contentPanel.add(zoomOutBtn, gbc);
         
-        // Movement Section
-        movementSectionLabel = addSection(contentPanel, gbc, 11, getText("movement_settings"));
+        // Enemy Size Section
+        addSection(contentPanel, gbc, 11, "Enemy Size (50-300%)");
         
-        gbc.gridx = 0; gbc.gridy = 12; gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.gridy = 12; gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
+        gbc.insets = new Insets(10, 30, 20, 30); // Extra bottom spacing for sliders
+        JSlider enemySizeSlider = createSlider(50, 300, (int)((enemyWidth / (double)DEFAULT_WIDTH) * 100));
+        enemySizeSlider.setPreferredSize(new Dimension(500, 50));
+        enemySizeSlider.addChangeListener(e -> {
+            int enemySizePercent = enemySizeSlider.getValue();
+            updateEnemySize(enemySizePercent);
+        });
+        contentPanel.add(enemySizeSlider, gbc);
+        gbc.weightx = 0;
+        gbc.insets = new Insets(15, 30, 15, 30); // Reset to normal spacing
+        
+        gbc.gridx = 0; gbc.gridy = 13; gbc.gridwidth = 1;
+        JButton enemyZoomInBtn = createButton("Enemy +25%");
+        enemyZoomInBtn.addActionListener(e -> {
+            int currentZoom = (int)((enemyWidth / (double)DEFAULT_WIDTH) * 100);
+            int newZoom = Math.min(300, currentZoom + 25);
+            enemySizeSlider.setValue(newZoom);
+        });
+        contentPanel.add(enemyZoomInBtn, gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 13;
+        JButton enemyZoomOutBtn = createButton("Enemy -25%");
+        enemyZoomOutBtn.addActionListener(e -> {
+            int currentZoom = (int)((enemyWidth / (double)DEFAULT_WIDTH) * 100);
+            int newZoom = Math.max(50, currentZoom - 25);
+            enemySizeSlider.setValue(newZoom);
+        });
+        contentPanel.add(enemyZoomOutBtn, gbc);
+        
+        // Movement Section
+        movementSectionLabel = addSection(contentPanel, gbc, 14, getText("movement_settings"));
+        
+        gbc.gridx = 0; gbc.gridy = 15; gbc.gridwidth = 1;
         crossScreenBox = createCheckBox(getText("allow_cross_screen"), allowCrossScreen);
         crossScreenBox.addActionListener(e -> allowCrossScreen = crossScreenBox.isSelected());
         contentPanel.add(crossScreenBox, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 12;
+        gbc.gridx = 1; gbc.gridy = 15;
         testCrossScreenBtn = createButton(getText("test_cross_screen"));
         testCrossScreenBtn.addActionListener(e -> moveToRandomScreen());
         contentPanel.add(testCrossScreenBtn, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 13; gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.gridy = 16; gbc.gridwidth = 1;
         musicBox = createCheckBox(getText("music_enabled"), musicEnabled);
         musicBox.addActionListener(e -> {
             setMusicEnabled(musicBox.isSelected());
@@ -2756,14 +3453,24 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         contentPanel.add(musicBox, gbc);
         
         // Horror Section
-        horrorSectionLabel = addSection(contentPanel, gbc, 14, getText("horror_mode"));
+        horrorSectionLabel = addSection(contentPanel, gbc, 17, getText("horror_mode"));
         
-        gbc.gridx = 0; gbc.gridy = 15; gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.gridy = 18; gbc.gridwidth = 1;
         enemyBox = createCheckBox(getText("enable_enemies"), enemyEnabled);
         enemyBox.addActionListener(e -> toggleEnemySystem(enemyBox.isSelected()));
         contentPanel.add(enemyBox, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 15;
+        // Add warning label if enemy system is disabled
+        if (!enemyEnabled) {
+            gbc.gridx = 0; gbc.gridy = 19; gbc.gridwidth = 2;
+            gbc.insets = new Insets(2, 30, 2, 5);
+            JLabel warningLabel = createLabel("WARNING: Enemy system is disabled. Enable above to see imported enemies.");
+            warningLabel.setForeground(Color.ORANGE);
+            contentPanel.add(warningLabel, gbc);
+            gbc.insets = new Insets(5, 30, 5, 30);
+        }
+        
+        gbc.gridx = 1; gbc.gridy = 18;
         spawnEnemyBtn = createButton(getText("spawn_enemy_now"));
         spawnEnemyBtn.addActionListener(e -> {
             if (enemyEnabled) {
@@ -2777,15 +3484,15 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         });
         contentPanel.add(spawnEnemyBtn, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 16; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 20; gbc.gridwidth = 2;
         enemyInfoLabel = createLabel(getText("enemies") + ": " + enemies.size() + " / " + maxEnemies + " active");
         contentPanel.add(enemyInfoLabel, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 17; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 21; gbc.gridwidth = 2;
         maxEnemiesLabel = createLabel(getText("max_enemies") + ": " + maxEnemies);
         contentPanel.add(maxEnemiesLabel, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 18; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 22; gbc.gridwidth = 2;
         gbc.weightx = 1.0;
         JSlider maxEnemiesSlider = createSlider(1, 10, maxEnemies);
         maxEnemiesSlider.setPreferredSize(new Dimension(350, 40));
@@ -2801,12 +3508,14 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         contentPanel.add(maxEnemiesSlider, gbc);
         gbc.weightx = 0;
         
-        gbc.gridx = 0; gbc.gridy = 19; gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.gridy = 23; gbc.gridwidth = 1;
+        gbc.weightx = 1.0;
         clearEnemiesBtn = createButton(getText("clear_all_enemies"));
         clearEnemiesBtn.addActionListener(e -> stopEnemySystem());
         contentPanel.add(clearEnemiesBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 19;
+        gbc.gridx = 1; gbc.gridy = 23;
+        gbc.weightx = 1.0;
         forceCleanupBtn = createButton(getText("force_cleanup"));
         forceCleanupBtn.addActionListener(e -> {
             System.out.println("Force cleanup button pressed");
@@ -2827,19 +3536,38 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         });
         contentPanel.add(forceCleanupBtn, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 20; gbc.gridwidth = 1;
-        JButton debugBtn = createButton("Debug Enemy Count");
+        gbc.gridx = 0; gbc.gridy = 24; gbc.gridwidth = 1;
+        gbc.weightx = 1.0;
+        debugBtn = createButton(getText("Debug_Enemy_Count"));
         debugBtn.addActionListener(e -> debugEnemyCounts());
         contentPanel.add(debugBtn, gbc);
+        gbc.weightx = 0; // Reset weight
         
-        gbc.gridx = 0; gbc.gridy = 21; gbc.gridwidth = 1;
+        // Character Import Section
+        characterSectionLabel = addSection(contentPanel, gbc, 25, getText("character_section"));
+        
+        gbc.gridx = 0; gbc.gridy = 26; gbc.gridwidth = 1;
+        gbc.weightx = 1.0;
+        importCharacterBtn = createButton(getText("import_character"));
+        importCharacterBtn.addActionListener(e -> openCharacterImportWindow());
+        contentPanel.add(importCharacterBtn, gbc);
+        
+        gbc.gridx = 1; gbc.gridy = 26;
+        gbc.weightx = 1.0;
+        switchCharacterBtn = createButton(getText("switch_character"));
+        switchCharacterBtn.addActionListener(e -> showCharacterSwitchDialog());
+        contentPanel.add(switchCharacterBtn, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 27; gbc.gridwidth = 1;
+        gbc.weightx = 1.0;
         closeBtn = createButton(getText("close"));
         closeBtn.addActionListener(e -> {
             settingsWindow.setVisible(false);
         });
         contentPanel.add(closeBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 21;
+        gbc.gridx = 1; gbc.gridy = 27;
+        gbc.weightx = 1.0;
         exitBtn = createButton(getText("exit_program"));
         exitBtn.setBackground(new Color(150, 50, 50)); // Red background for exit button
         exitBtn.addActionListener(e -> {
@@ -3057,10 +3785,11 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         button.setForeground(Color.WHITE);
         button.setBackground(new Color(70, 70, 90));
         // Use a font that supports both English and Chinese characters
-        button.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
-        button.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        button.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14)); // Larger font
+        button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15)); // More padding
         button.setFocusPainted(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setPreferredSize(new Dimension(150, 40)); // Larger button size
         
         button.addMouseListener(new MouseAdapter() {
             @Override
@@ -3080,8 +3809,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         JLabel label = new JLabel(text);
         label.setForeground(Color.WHITE);
         // Use a font that supports both English and Chinese characters
-        label.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
-        label.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        label.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14)); // Larger font
+        label.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15)); // More padding
         return label;
     }
     
@@ -3125,10 +3854,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     
     private JLabel addSection(JPanel panel, GridBagConstraints gbc, int y, String title) {
         gbc.gridx = 0; gbc.gridy = y; gbc.gridwidth = 2;
+        gbc.insets = new Insets(30, 30, 15, 30); // Extra top spacing for sections
         JLabel sectionTitle = createLabel(title);
-        sectionTitle.setFont(new Font("Microsoft YaHei", Font.BOLD, 14));
+        sectionTitle.setFont(new Font("Microsoft YaHei", Font.BOLD, 16)); // Larger font
         sectionTitle.setForeground(new Color(200, 200, 255)); // Slightly highlighted
         panel.add(sectionTitle, gbc);
+        gbc.insets = new Insets(15, 30, 15, 30); // Reset to normal spacing
         return sectionTitle;
     }
     
@@ -3291,6 +4022,377 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         setLocation(newX, newY);
     }
     
+    /**
+     * Open the character import window
+     */
+    private void openCharacterImportWindow() {
+        System.out.println("Opening character import window...");
+        
+        // Debug: Check timer states before opening window
+        debugTimerStates("Before opening import window");
+        
+        if (characterImportWindow == null) {
+            characterImportWindow = new CharacterImportWindow();
+            
+            // Add window listener to ensure pet continues moving when import window is active
+            characterImportWindow.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowOpened(WindowEvent e) {
+                    System.out.println("Import window opened - ensuring pet timers remain active");
+                    ensureTimersActive();
+                }
+                
+                @Override
+                public void windowClosed(WindowEvent e) {
+                    System.out.println("Import window closed - pet should continue moving");
+                    ensureTimersActive();
+                }
+                
+                @Override
+                public void windowIconified(WindowEvent e) {
+                    System.out.println("Import window iconified - ensuring pet timers remain active");
+                    ensureTimersActive();
+                }
+                
+                @Override
+                public void windowDeiconified(WindowEvent e) {
+                    System.out.println("Import window deiconified - ensuring pet timers remain active");
+                    ensureTimersActive();
+                }
+            });
+        }
+        
+        characterImportWindow.setVisible(true);
+        characterImportWindow.toFront();
+        
+        // Debug: Check timer states after opening window
+        debugTimerStates("After opening import window");
+        
+        // Ensure timers remain active
+        ensureTimersActive();
+    }
+    
+    /**
+     * Debug method to check timer states
+     */
+    private void debugTimerStates(String context) {
+        System.out.println("=== Timer States (" + context + ") ===");
+        System.out.println("Animation timer running: " + (animationTimer != null && animationTimer.isRunning()));
+        System.out.println("Movement timer running: " + (movementTimer != null && movementTimer.isRunning()));
+        System.out.println("Behavior timer running: " + (behaviorTimer != null && behaviorTimer.isRunning()));
+        System.out.println("Safety timer running: " + (safetyTimer != null && safetyTimer.isRunning()));
+        System.out.println("Multi-frame animation timer running: " + (multiFrameAnimationTimer != null && multiFrameAnimationTimer.isRunning()));
+        System.out.println("Current behavior: " + currentBehavior + " (0=idle, 1=walking, 2=special, 3=pain)");
+        System.out.println("Is walking: " + isWalking);
+        System.out.println("Is dragging: " + isDragging);
+        System.out.println("================================");
+    }
+    
+    /**
+     * Ensure all timers remain active
+     */
+    public void ensureTimersActive() {
+        System.out.println("Ensuring timers remain active...");
+        
+        // Restart animation timer if stopped
+        if (animationTimer == null || !animationTimer.isRunning()) {
+            System.out.println("Restarting animation timer");
+            if (animationTimer != null) animationTimer.stop();
+            animationTimer = new Timer(ANIMATION_DELAY, e -> updateAnimation());
+            animationTimer.start();
+        }
+        
+        // Restart movement timer if stopped
+        if (movementTimer == null || !movementTimer.isRunning()) {
+            System.out.println("Restarting movement timer");
+            if (movementTimer != null) movementTimer.stop();
+            movementTimer = new Timer(2000 + random.nextInt(3000), e -> {
+                if (!isDragging && currentBehavior == 1 && !isWalking) {
+                    System.out.println("Movement timer triggered - starting random walk");
+                    startRandomWalk();
+                }
+                movementTimer.setDelay(2000 + random.nextInt(3000));
+            });
+            movementTimer.start();
+        }
+        
+        // Restart behavior timer if stopped
+        if (behaviorTimer == null || !behaviorTimer.isRunning()) {
+            System.out.println("Restarting behavior timer");
+            if (behaviorTimer != null) behaviorTimer.stop();
+            behaviorTimer = new Timer(15000 + random.nextInt(20000), e -> {
+                if (!isDragging && random.nextInt(3) == 0) {
+                    playSpecialAnimation();
+                }
+                behaviorTimer.setDelay(15000 + random.nextInt(20000));
+            });
+            behaviorTimer.start();
+        }
+        
+        // Restart safety timer if stopped
+        if (safetyTimer == null || !safetyTimer.isRunning()) {
+            System.out.println("Restarting safety timer");
+            if (safetyTimer != null) safetyTimer.stop();
+            safetyTimer = new Timer(5000, e -> {
+                checkAndFixPetLocation();
+            });
+            safetyTimer.start();
+        }
+        
+        // If pet is supposed to be walking but isn't, restart movement
+        if (currentBehavior == 1 && !isWalking && !isDragging) {
+            System.out.println("Pet should be walking but isn't - restarting movement");
+            startRandomWalk();
+        }
+        
+        // Also check if multi-frame animation timer should be running
+        CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
+        if (currentSet != null && isWalking) {
+            if (currentSet.getWalkingAnimation().getFrameCount() > 0 && !multiFrameAnimationTimer.isRunning()) {
+                System.out.println("Pet is walking but multi-frame animation not running - restarting animation");
+                currentSet.getWalkingAnimation().reset();
+                multiFrameAnimationTimer.start();
+            }
+        }
+        
+        System.out.println("Timer restart complete");
+    }
+    
+    /**
+     * Show dialog to switch between character sets
+     */
+    private void showCharacterSwitchDialog() {
+        CharacterSetManager manager = CharacterSetManager.getInstance();
+        
+        // Get available character sets
+        Set<String> petSets = manager.getPetCharacterSetNames();
+        Set<String> enemySets = manager.getEnemyCharacterSetNames();
+        
+        if (petSets.isEmpty() && enemySets.isEmpty()) {
+            JOptionPane.showMessageDialog(settingsWindow, 
+                "No character sets available. Import some characters first!", 
+                "No Character Sets", 
+                JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // Create options for selection
+        String[] options = {"Switch Pet Characters", "Switch Enemy Characters", "Set Default Pet", "Set Default Enemy", "Cancel"};
+        int choice = JOptionPane.showOptionDialog(settingsWindow, 
+            "What would you like to do with character sets?", 
+            "Character Management", 
+            JOptionPane.DEFAULT_OPTION, 
+            JOptionPane.QUESTION_MESSAGE, 
+            null, 
+            options, 
+            options[0]);
+        
+        if (choice == 0) { // Switch Pet Characters
+            if (petSets.isEmpty()) {
+                JOptionPane.showMessageDialog(settingsWindow, 
+                    "No pet character sets available.", 
+                    "No Pet Characters", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            String selectedSet = showCharacterSelectionDialog(settingsWindow, "Switch Pet Character", petSets, true);
+            
+            if (selectedSet != null) {
+                switchCharacterSet(selectedSet, true);
+                JOptionPane.showMessageDialog(settingsWindow, 
+                    "Switched to pet character set: " + selectedSet, 
+                    "Character Switch Complete", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+        } else if (choice == 1) { // Switch Enemy Characters
+            if (enemySets.isEmpty()) {
+                JOptionPane.showMessageDialog(settingsWindow, 
+                    "No enemy character sets available.", 
+                    "No Enemy Characters", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            String selectedSet = showCharacterSelectionDialog(settingsWindow, "Switch Enemy Character", enemySets, false);
+            
+            if (selectedSet != null) {
+                switchCharacterSet(selectedSet, false);
+                JOptionPane.showMessageDialog(settingsWindow, 
+                    "Switched to enemy character set: " + selectedSet, 
+                    "Character Switch Complete", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+        } else if (choice == 2) { // Set Default Pet
+            if (petSets.isEmpty()) {
+                JOptionPane.showMessageDialog(settingsWindow, 
+                    "No pet character sets available.", 
+                    "No Pet Characters", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            String selectedSet = showCharacterSelectionDialog(settingsWindow, "Set Default Pet Character", petSets, true);
+            
+            if (selectedSet != null) {
+                manager.setDefaultPetCharacterSet(selectedSet);
+                JOptionPane.showMessageDialog(settingsWindow, 
+                    "Set default pet character set to: " + selectedSet + "\nThis will be used when the program starts.", 
+                    "Default Set Successfully", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+        } else if (choice == 3) { // Set Default Enemy
+            if (enemySets.isEmpty()) {
+                JOptionPane.showMessageDialog(settingsWindow, 
+                    "No enemy character sets available.", 
+                    "No Enemy Characters", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            
+            String selectedSet = showCharacterSelectionDialog(settingsWindow, "Set Default Enemy Character", enemySets, false);
+            
+            if (selectedSet != null) {
+                manager.setDefaultEnemyCharacterSet(selectedSet);
+                JOptionPane.showMessageDialog(settingsWindow, 
+                    "Set default enemy character set to: " + selectedSet + "\nThis will be used when the program starts.", 
+                    "Default Set Successfully", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+        // choice == 4 is Cancel, do nothing
+    }
+    
+    /**
+     * Show character selection dialog with previews
+     */
+    private String showCharacterSelectionDialog(JFrame parent, String title, Set<String> characterSets, boolean isPet) {
+        if (characterSets.isEmpty()) return null;
+        
+        JDialog dialog = new JDialog(parent, title, true);
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(parent);
+        
+        String[] selectedCharacter = {null}; // Use array to modify from inner class
+        
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        
+        // Create scrollable panel for character list
+        JPanel characterPanel = new JPanel();
+        characterPanel.setLayout(new BoxLayout(characterPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(characterPanel);
+        scrollPane.setPreferredSize(new Dimension(580, 300));
+        
+        ButtonGroup buttonGroup = new ButtonGroup();
+        
+        // Add each character as a row with preview image and name
+        for (String setName : characterSets) {
+            JPanel rowPanel = new JPanel(new BorderLayout());
+            rowPanel.setBorder(BorderFactory.createEtchedBorder());
+            rowPanel.setPreferredSize(new Dimension(560, 80));
+            
+            // Get character set to extract preview image
+            CharacterSet characterSet = isPet ? 
+                characterSetManager.getPetCharacterSet(setName) :
+                characterSetManager.getEnemyCharacterSet(setName);
+            
+            // Create preview image
+            JLabel imageLabel = new JLabel();
+            imageLabel.setPreferredSize(new Dimension(64, 64));
+            imageLabel.setHorizontalAlignment(JLabel.CENTER);
+            
+            if (characterSet != null) {
+                // Try to get first frame of idle animation for preview
+                AnimationSequence idleSeq = characterSet.getIdleAnimation();
+                if (idleSeq.getFrameCount() > 0) {
+                    AnimationFrame firstFrame = idleSeq.getFrames().get(0);
+                    if (firstFrame.getOriginalImage() != null) {
+                        Image img = firstFrame.getOriginalImage().getImage();
+                        Image scaled = img.getScaledInstance(60, 60, Image.SCALE_SMOOTH);
+                        imageLabel.setIcon(new ImageIcon(scaled));
+                    }
+                }
+            }
+            
+            // If no preview available, show placeholder
+            if (imageLabel.getIcon() == null) {
+                imageLabel.setText("No Preview");
+                imageLabel.setOpaque(true);
+                imageLabel.setBackground(Color.LIGHT_GRAY);
+            }
+            
+            // Create radio button with character name
+            JRadioButton radioButton = new JRadioButton(setName);
+            radioButton.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+            buttonGroup.add(radioButton);
+            
+            // Create info panel with name and details
+            JPanel infoPanel = new JPanel(new BorderLayout());
+            infoPanel.add(radioButton, BorderLayout.NORTH);
+            
+            // Add description if available
+            if (characterSet != null && !characterSet.getDescription().isEmpty()) {
+                JLabel descLabel = new JLabel("<html><i>" + characterSet.getDescription() + "</i></html>");
+                descLabel.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 11));
+                infoPanel.add(descLabel, BorderLayout.CENTER);
+            }
+            
+            // Add author if available
+            if (characterSet != null && !characterSet.getAuthorName().isEmpty()) {
+                JLabel authorLabel = new JLabel("By: " + characterSet.getAuthorName());
+                authorLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 10));
+                infoPanel.add(authorLabel, BorderLayout.SOUTH);
+            }
+            
+            // Add click listener to select radio button when clicking anywhere on row
+            rowPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    radioButton.setSelected(true);
+                }
+            });
+            
+            rowPanel.add(imageLabel, BorderLayout.WEST);
+            rowPanel.add(infoPanel, BorderLayout.CENTER);
+            
+            characterPanel.add(rowPanel);
+            
+            // Select first item by default
+            if (selectedCharacter[0] == null) {
+                radioButton.setSelected(true);
+                selectedCharacter[0] = setName;
+            }
+            
+            // Update selection when radio button changes
+            radioButton.addActionListener(e -> selectedCharacter[0] = setName);
+        }
+        
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        // Add buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JButton okButton = new JButton("OK");
+        JButton cancelButton = new JButton("Cancel");
+        
+        okButton.addActionListener(e -> dialog.dispose());
+        cancelButton.addActionListener(e -> {
+            selectedCharacter[0] = null;
+            dialog.dispose();
+        });
+        
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.add(mainPanel);
+        dialog.setVisible(true);
+        
+        return selectedCharacter[0];
+    }
+    
     public static void main(String[] args) {
         // Use system look and feel
         try {
@@ -3330,28 +4432,2396 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
 
     @Override
     public void setLocation(Point p) {
-        setLocation(p.x, p.y);
+        super.setLocation(p);
+    }
+}
+
+// ============================================================================
+// CHARACTER IMPORT SYSTEM - CORE DATA STRUCTURES
+// ============================================================================
+
+/**
+ * Represents a single animation frame with image and timing
+ */
+class AnimationFrame {
+    private ImageIcon image;
+    private ImageIcon originalImage; // Store original high-quality version
+    private String imagePath;
+    private int duration; // Duration in milliseconds
+    
+    public AnimationFrame(ImageIcon image, String imagePath, int duration) {
+        this.originalImage = image; // Store original
+        this.image = image;
+        this.imagePath = imagePath;
+        this.duration = duration;
+    }
+    
+    public ImageIcon getImage() { return image; }
+    public ImageIcon getOriginalImage() { return originalImage; }
+    public String getImagePath() { return imagePath; }
+    public int getDuration() { return duration; }
+    
+    public void setImage(ImageIcon image) { this.image = image; }
+    public void setDuration(int duration) { this.duration = duration; }
+    
+    /**
+     * Scale this frame to new dimensions using original high-quality image
+     */
+    public void scaleToSize(int width, int height) {
+        if (originalImage != null) {
+            Image originalImg = originalImage.getImage();
+            Image scaledImg = originalImg.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            this.image = new ImageIcon(scaledImg);
+        }
+    }
+}
+
+/**
+ * Represents a sequence of animation frames (walking, idle, pain, etc.)
+ */
+class AnimationSequence {
+    private String name;
+    private List<AnimationFrame> frames;
+    private boolean loop;
+    private int currentFrame;
+    
+    public AnimationSequence(String name, boolean loop) {
+        this.name = name;
+        this.loop = loop;
+        this.frames = new ArrayList<>();
+        this.currentFrame = 0;
+    }
+    
+    public void addFrame(AnimationFrame frame) {
+        frames.add(frame);
+    }
+    
+    public void removeFrame(int index) {
+        if (index >= 0 && index < frames.size()) {
+            frames.remove(index);
+        }
+    }
+    
+    public AnimationFrame getCurrentFrame() {
+        if (frames.isEmpty()) return null;
+        return frames.get(currentFrame);
+    }
+    
+    public AnimationFrame nextFrame() {
+        if (frames.isEmpty()) return null;
+        
+        currentFrame++;
+        if (currentFrame >= frames.size()) {
+            if (loop) {
+                currentFrame = 0;
+            } else {
+                currentFrame = frames.size() - 1; // Stay at last frame
+            }
+        }
+        return frames.get(currentFrame);
+    }
+    
+    public void reset() {
+        currentFrame = 0;
+    }
+    
+    // Getters
+    public String getName() { return name; }
+    public List<AnimationFrame> getFrames() { return frames; }
+    public boolean isLoop() { return loop; }
+    public int getCurrentFrameIndex() { return currentFrame; }
+    public int getFrameCount() { return frames.size(); }
+    
+    // Setters
+    public void setLoop(boolean loop) { this.loop = loop; }
+}
+
+/**
+ * Represents a complete character set with all animations
+ */
+class CharacterSet {
+    private String name;
+    private String description;
+    private String authorName;
+    private String setPath; // Directory path for this character set
+    
+    // Animation sequences
+    private AnimationSequence idleAnimation;
+    private AnimationSequence walkingAnimation;
+    private AnimationSequence specialAnimation;
+    private AnimationSequence painAnimation;
+    
+    public CharacterSet(String name, String setPath) {
+        this.name = name;
+        this.setPath = setPath;
+        this.description = "";
+        this.authorName = "";
+        
+        // Initialize animation sequences
+        this.idleAnimation = new AnimationSequence("idle", true);
+        this.walkingAnimation = new AnimationSequence("walking", true);
+        this.specialAnimation = new AnimationSequence("special", false);
+        this.painAnimation = new AnimationSequence("pain", false);
+    }
+    
+    // Getters
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public String getAuthorName() { return authorName; }
+    public String getSetPath() { return setPath; }
+    public AnimationSequence getIdleAnimation() { return idleAnimation; }
+    public AnimationSequence getWalkingAnimation() { return walkingAnimation; }
+    public AnimationSequence getSpecialAnimation() { return specialAnimation; }
+    public AnimationSequence getPainAnimation() { return painAnimation; }
+    
+    // Setters
+    public void setName(String name) { this.name = name; }
+    public void setDescription(String description) { this.description = description; }
+    public void setAuthorName(String authorName) { this.authorName = authorName; }
+    public void setSetPath(String setPath) { this.setPath = setPath; }
+    
+    /**
+     * Check if character set has all required animations
+     */
+    public boolean isComplete() {
+        // Only require idle and walking animations for basic functionality
+        // Special and pain animations are optional
+        return idleAnimation.getFrameCount() > 0 && 
+               walkingAnimation.getFrameCount() > 0;
+    }
+    
+    /**
+     * Check if character set has all animation types (including optional ones)
+     */
+    public boolean isFullyComplete() {
+        return idleAnimation.getFrameCount() > 0 && 
+               walkingAnimation.getFrameCount() > 0 &&
+               specialAnimation.getFrameCount() > 0 &&
+               painAnimation.getFrameCount() > 0;
+    }
+    
+    /**
+     * Get animation sequence by name
+     */
+    public AnimationSequence getAnimationByName(String animationName) {
+        switch (animationName.toLowerCase()) {
+            case "idle": return idleAnimation;
+            case "walking": return walkingAnimation;
+            case "special": return specialAnimation;
+            case "pain": return painAnimation;
+            default: return null;
+        }
+    }
+}
+
+/**
+ * Manages character sets and handles switching between them
+ */
+class CharacterSetManager {
+    private static CharacterSetManager instance;
+    private Map<String, CharacterSet> petCharacterSets;
+    private Map<String, CharacterSet> enemyCharacterSets;
+    private String currentPetSet;
+    private String currentEnemySet;
+    private String characterSetsPath;
+    
+    private CharacterSetManager() {
+        this.petCharacterSets = new HashMap<>();
+        this.enemyCharacterSets = new HashMap<>();
+        this.characterSetsPath = "resources/CharacterSets/";
+        this.currentPetSet = "default";
+        this.currentEnemySet = "default";
+        
+        // Create character sets directory if it doesn't exist
+        createCharacterSetsDirectory();
+        
+        // Initialize default character sets
+        initializeDefaultCharacterSets();
+    }
+    
+    public static CharacterSetManager getInstance() {
+        if (instance == null) {
+            instance = new CharacterSetManager();
+        }
+        return instance;
+    }
+    
+    private void createCharacterSetsDirectory() {
+        try {
+            File dir = new File(characterSetsPath);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+            
+            // Create subdirectories
+            new File(characterSetsPath + "Pets/").mkdirs();
+            new File(characterSetsPath + "Enemies/").mkdirs();
+            new File(characterSetsPath + "Pets/default/").mkdirs();
+            new File(characterSetsPath + "Enemies/default/").mkdirs();
+        } catch (Exception e) {
+            System.out.println("Error creating character sets directory: " + e.getMessage());
+        }
+    }
+    
+    private void initializeDefaultCharacterSets() {
+        // Create default pet character set using existing images
+        CharacterSet defaultPetSet = new CharacterSet("default", characterSetsPath + "Pets/default/");
+        
+        // Note: We'll populate these with existing images in the integration phase
+        petCharacterSets.put("default", defaultPetSet);
+        
+        // Create default enemy character set
+        CharacterSet defaultEnemySet = new CharacterSet("default", characterSetsPath + "Enemies/default/");
+        enemyCharacterSets.put("default", defaultEnemySet);
+        
+        System.out.println("Character Set Manager initialized with default sets");
+        
+        // Load existing character sets from disk
+        loadCharacterSetsFromDisk();
+        
+        // Load default character sets from config file
+        loadDefaultCharacterSets();
+        
+        // Don't automatically select imported character sets unless user set a default
+        System.out.println("Using character set: " + currentPetSet + ". Use settings to switch characters.");
+    }
+    
+    // Pet character set management
+    public void addPetCharacterSet(CharacterSet characterSet) {
+        petCharacterSets.put(characterSet.getName(), characterSet);
+    }
+    
+    public CharacterSet getCurrentPetCharacterSet() {
+        return petCharacterSets.get(currentPetSet);
+    }
+    
+    public void setCurrentPetCharacterSet(String setName) {
+        if (petCharacterSets.containsKey(setName)) {
+            currentPetSet = setName;
+            System.out.println("Switched to pet character set: " + setName);
+        }
+    }
+    
+    // Enemy character set management
+    public void addEnemyCharacterSet(CharacterSet characterSet) {
+        enemyCharacterSets.put(characterSet.getName(), characterSet);
+    }
+    
+    public CharacterSet getCurrentEnemyCharacterSet() {
+        return enemyCharacterSets.get(currentEnemySet);
+    }
+    
+    public void setCurrentEnemyCharacterSet(String setName) {
+        if (enemyCharacterSets.containsKey(setName)) {
+            currentEnemySet = setName;
+            System.out.println("Switched to enemy character set: " + setName);
+        }
+    }
+    
+    // General methods
+    public Set<String> getPetCharacterSetNames() {
+        return petCharacterSets.keySet();
+    }
+    
+    public Set<String> getEnemyCharacterSetNames() {
+        return enemyCharacterSets.keySet();
+    }
+    
+    public boolean hasPetCharacterSet(String name) {
+        return petCharacterSets.containsKey(name);
+    }
+    
+    public boolean hasEnemyCharacterSet(String name) {
+        return enemyCharacterSets.containsKey(name);
+    }
+    
+    public CharacterSet getPetCharacterSet(String name) {
+        return petCharacterSets.get(name);
+    }
+    
+    public CharacterSet getEnemyCharacterSet(String name) {
+        return enemyCharacterSets.get(name);
+    }
+    
+    /**
+     * Remove a pet character set
+     */
+    public boolean removePetCharacterSet(String name) {
+        if (!petCharacterSets.containsKey(name) || name.equals("default")) {
+            return false; // Cannot remove default or non-existent sets
+        }
+        CharacterSet removed = petCharacterSets.remove(name);
+        
+        // If this was the current set, switch to default
+        if (name.equals(currentPetSet)) {
+            currentPetSet = "default";
+        }
+        
+        return removed != null;
+    }
+    
+    /**
+     * Remove an enemy character set
+     */
+    public boolean removeEnemyCharacterSet(String name) {
+        if (!enemyCharacterSets.containsKey(name) || name.equals("default")) {
+            return false; // Cannot remove default or non-existent sets
+        }
+        CharacterSet removed = enemyCharacterSets.remove(name);
+        
+        // If this was the current set, switch to default
+        if (name.equals(currentEnemySet)) {
+            currentEnemySet = "default";
+        }
+        
+        return removed != null;
+    }
+    
+    /**
+     * Set a character set as the startup default
+     */
+    public void setDefaultPetCharacterSet(String setName) {
+        if (petCharacterSets.containsKey(setName)) {
+            try {
+                // Save to a simple config file
+                File configFile = new File("character_defaults.properties");
+                StringBuilder content = new StringBuilder();
+                content.append("default_pet_character_set=").append(setName).append("\n");
+                if (configFile.exists()) {
+                    // Read existing content and update pet setting
+                    java.util.Properties props = new java.util.Properties();
+                    props.load(new java.io.FileInputStream(configFile));
+                    props.setProperty("default_pet_character_set", setName);
+                    props.store(new java.io.FileOutputStream(configFile), "Character Set Defaults");
+                } else {
+                    java.nio.file.Files.write(configFile.toPath(), content.toString().getBytes());
+                }
+                System.out.println("Set default pet character set to: " + setName);
+            } catch (Exception e) {
+                System.out.println("Error saving default character set: " + e.getMessage());
+            }
+        }
+    }
+    
+    public void setDefaultEnemyCharacterSet(String setName) {
+        if (enemyCharacterSets.containsKey(setName)) {
+            try {
+                // Save to a simple config file
+                File configFile = new File("character_defaults.properties");
+                java.util.Properties props = new java.util.Properties();
+                if (configFile.exists()) {
+                    props.load(new java.io.FileInputStream(configFile));
+                }
+                props.setProperty("default_enemy_character_set", setName);
+                props.store(new java.io.FileOutputStream(configFile), "Character Set Defaults");
+                System.out.println("Set default enemy character set to: " + setName);
+                System.out.println("Config file saved to: " + configFile.getAbsolutePath());
+                
+                // Also immediately set as current to ensure it's active
+                currentEnemySet = setName;
+                System.out.println("Immediately activated enemy character set: " + setName);
+            } catch (Exception e) {
+                System.out.println("Error saving default character set: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("Warning: Cannot set default enemy character set '" + setName + "' - not found in available sets");
+            System.out.println("Available enemy character sets: " + enemyCharacterSets.keySet());
+        }
+    }
+    
+    /**
+     * Load default character sets from config file
+     */
+    public void loadDefaultCharacterSets() {
+        try {
+            File configFile = new File("character_defaults.properties");
+            if (configFile.exists()) {
+                System.out.println("Loading default character sets from: " + configFile.getAbsolutePath());
+                java.util.Properties props = new java.util.Properties();
+                props.load(new java.io.FileInputStream(configFile));
+                
+                String defaultPet = props.getProperty("default_pet_character_set");
+                String defaultEnemy = props.getProperty("default_enemy_character_set");
+                
+                System.out.println("Config file contains - Pet: " + defaultPet + ", Enemy: " + defaultEnemy);
+                
+                if (defaultPet != null && petCharacterSets.containsKey(defaultPet)) {
+                    currentPetSet = defaultPet;
+                    System.out.println("Loaded default pet character set: " + defaultPet);
+                } else if (defaultPet != null) {
+                    System.out.println("Warning: Default pet character set '" + defaultPet + "' not found in available sets");
+                }
+                
+                if (defaultEnemy != null && enemyCharacterSets.containsKey(defaultEnemy)) {
+                    currentEnemySet = defaultEnemy;
+                    System.out.println("Loaded default enemy character set: " + defaultEnemy);
+                } else if (defaultEnemy != null) {
+                    System.out.println("Warning: Default enemy character set '" + defaultEnemy + "' not found in available sets");
+                }
+            } else {
+                System.out.println("No character defaults config file found at: " + configFile.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading default character sets: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Load character sets from disk
+     */
+    public void loadCharacterSetsFromDisk() {
+        loadPetCharacterSets();
+        loadEnemyCharacterSets();
+    }
+    
+    private void loadPetCharacterSets() {
+        try {
+            File petsDir = new File(characterSetsPath + "Pets/");
+            if (petsDir.exists() && petsDir.isDirectory()) {
+                File[] setDirs = petsDir.listFiles(File::isDirectory);
+                if (setDirs != null) {
+                    System.out.println("Loading pet character sets from: " + petsDir.getAbsolutePath());
+                    for (File setDir : setDirs) {
+                        String setName = setDir.getName();
+                        if (!petCharacterSets.containsKey(setName)) {
+                            CharacterSet characterSet = loadCharacterSetFromDirectory(setDir, setName);
+                            if (characterSet != null) {
+                                petCharacterSets.put(setName, characterSet);
+                                System.out.println("Loaded pet character set: " + setName);
+                            }
+                        }
+                    }
+                }
+            } else {
+                System.out.println("Pet character sets directory does not exist: " + petsDir.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading pet character sets: " + e.getMessage());
+        }
+    }
+    
+    private void loadEnemyCharacterSets() {
+        try {
+            File enemiesDir = new File(characterSetsPath + "Enemies/");
+            if (enemiesDir.exists() && enemiesDir.isDirectory()) {
+                File[] setDirs = enemiesDir.listFiles(File::isDirectory);
+                if (setDirs != null) {
+                    for (File setDir : setDirs) {
+                        String setName = setDir.getName();
+                        if (!enemyCharacterSets.containsKey(setName)) {
+                            CharacterSet characterSet = loadCharacterSetFromDirectory(setDir, setName);
+                            if (characterSet != null) {
+                                enemyCharacterSets.put(setName, characterSet);
+                                System.out.println("Successfully loaded enemy character set: " + setName);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Debug: Show loaded enemy character sets
+            System.out.println("Total enemy character sets loaded: " + enemyCharacterSets.size());
+            for (String setName : enemyCharacterSets.keySet()) {
+                System.out.println("  - " + setName);
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading enemy character sets: " + e.getMessage());
+        }
+    }
+    
+    private CharacterSet loadCharacterSetFromDirectory(File setDir, String setName) {
+        try {
+            CharacterSet characterSet = new CharacterSet(setName, setDir.getAbsolutePath() + "/");
+            
+            // Load metadata
+            Map<String, String> metadata = CharacterFileManager.loadCharacterSetMetadata(setDir);
+            if (metadata.containsKey("description")) {
+                characterSet.setDescription(metadata.get("description"));
+            }
+            if (metadata.containsKey("author")) {
+                characterSet.setAuthorName(metadata.get("author"));
+            }
+            
+            // Load animation sequences
+            File idleDir = new File(setDir, "idle");
+            File walkingDir = new File(setDir, "walking");
+            File specialDir = new File(setDir, "special");
+            File painDir = new File(setDir, "pain");
+            
+            if (idleDir.exists()) {
+                AnimationSequence idleSeq = CharacterFileManager.loadAnimationFromDirectory(idleDir, "idle", true);
+                characterSet.getIdleAnimation().getFrames().clear();
+                characterSet.getIdleAnimation().getFrames().addAll(idleSeq.getFrames());
+            }
+            
+            if (walkingDir.exists()) {
+                AnimationSequence walkingSeq = CharacterFileManager.loadAnimationFromDirectory(walkingDir, "walking", true);
+                characterSet.getWalkingAnimation().getFrames().clear();
+                characterSet.getWalkingAnimation().getFrames().addAll(walkingSeq.getFrames());
+            }
+            
+            if (specialDir.exists()) {
+                AnimationSequence specialSeq = CharacterFileManager.loadAnimationFromDirectory(specialDir, "special", false);
+                characterSet.getSpecialAnimation().getFrames().clear();
+                characterSet.getSpecialAnimation().getFrames().addAll(specialSeq.getFrames());
+            }
+            
+            if (painDir.exists()) {
+                AnimationSequence painSeq = CharacterFileManager.loadAnimationFromDirectory(painDir, "pain", false);
+                characterSet.getPainAnimation().getFrames().clear();
+                characterSet.getPainAnimation().getFrames().addAll(painSeq.getFrames());
+            }
+            
+            System.out.println("Loaded character set: " + setName + " from " + setDir.getAbsolutePath());
+            return characterSet;
+            
+        } catch (Exception e) {
+            System.out.println("Error loading character set from directory: " + e.getMessage());
+            return null;
+        }
+    }
+}
+
+// ============================================================================
+// CHARACTER IMPORT SYSTEM - FILE MANAGEMENT UTILITIES
+// ============================================================================
+
+/**
+ * Handles file operations for character sets
+ */
+class CharacterFileManager {
+    private static final String[] SUPPORTED_FORMATS = {".png", ".jpg", ".jpeg", ".gif"};
+    private static final int MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB max
+    
+    /**
+     * Copy and organize imported images into character set directory
+     */
+    public static boolean importImageFiles(File[] imageFiles, String targetDirectory, String animationType) {
+        try {
+            File targetDir = new File(targetDirectory);
+            if (!targetDir.exists()) {
+                targetDir.mkdirs();
+            }
+            
+            // Create animation subdirectory
+            File animationDir = new File(targetDir, animationType);
+            if (!animationDir.exists()) {
+                animationDir.mkdirs();
+            }
+            
+            int frameIndex = 0;
+            for (File imageFile : imageFiles) {
+                if (isValidImageFile(imageFile)) {
+                    String extension = getFileExtension(imageFile.getName());
+                    String targetFileName = String.format("%s_frame_%03d%s", animationType, frameIndex, extension);
+                    File targetFile = new File(animationDir, targetFileName);
+                    
+                    // Copy file
+                    copyFile(imageFile, targetFile);
+                    frameIndex++;
+                    
+                    System.out.println("Imported: " + imageFile.getName() + " -> " + targetFileName);
+                }
+            }
+            
+            return frameIndex > 0; // Return true if at least one file was imported
+            
+        } catch (Exception e) {
+            System.out.println("Error importing image files: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Load animation sequence from directory
+     */
+    public static AnimationSequence loadAnimationFromDirectory(File animationDir, String animationType, boolean loop) {
+        AnimationSequence sequence = new AnimationSequence(animationType, loop);
+        
+        try {
+            if (!animationDir.exists() || !animationDir.isDirectory()) {
+                return sequence;
+            }
+            
+            // Get all image files and sort them
+            File[] imageFiles = animationDir.listFiles((dir, name) -> {
+                String lowercaseName = name.toLowerCase();
+                for (String format : SUPPORTED_FORMATS) {
+                    if (lowercaseName.endsWith(format)) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            
+            if (imageFiles != null) {
+                // Sort files by name to ensure correct frame order
+                java.util.Arrays.sort(imageFiles);
+                
+                for (File imageFile : imageFiles) {
+                    ImageIcon image = loadAndScaleImagePreserveAspect(imageFile, 256); // Use larger max size
+                    if (image != null) {
+                        AnimationFrame frame = new AnimationFrame(image, imageFile.getAbsolutePath(), 150); // Default duration
+                        sequence.addFrame(frame);
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Error loading animation from directory: " + e.getMessage());
+        }
+        
+        return sequence;
+    }
+    
+    /**
+     * Save character set metadata to file
+     */
+    public static boolean saveCharacterSetMetadata(CharacterSet characterSet) {
+        try {
+            File setDir = new File(characterSet.getSetPath());
+            if (!setDir.exists()) {
+                setDir.mkdirs();
+            }
+            
+            File metadataFile = new File(setDir, "metadata.properties");
+            
+            // Create properties content
+            StringBuilder content = new StringBuilder();
+            content.append("name=").append(characterSet.getName()).append("\n");
+            content.append("description=").append(characterSet.getDescription()).append("\n");
+            content.append("author=").append(characterSet.getAuthorName()).append("\n");
+            content.append("created=").append(System.currentTimeMillis()).append("\n");
+            content.append("version=1.0").append("\n");
+            
+            // Write to file
+            java.nio.file.Files.write(metadataFile.toPath(), content.toString().getBytes());
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.out.println("Error saving character set metadata: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Load character set metadata from file
+     */
+    public static Map<String, String> loadCharacterSetMetadata(File setDirectory) {
+        Map<String, String> metadata = new HashMap<>();
+        
+        try {
+            File metadataFile = new File(setDirectory, "metadata.properties");
+            if (metadataFile.exists()) {
+                List<String> lines = java.nio.file.Files.readAllLines(metadataFile.toPath());
+                for (String line : lines) {
+                    if (line.contains("=")) {
+                        String[] parts = line.split("=", 2);
+                        if (parts.length == 2) {
+                            metadata.put(parts[0].trim(), parts[1].trim());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading character set metadata: " + e.getMessage());
+        }
+        
+        return metadata;
+    }
+    
+    /**
+     * Validate image file
+     */
+    public static boolean isValidImageFile(File file) {
+        if (!file.exists() || !file.isFile()) {
+            return false;
+        }
+        
+        // Check file size
+        if (file.length() > MAX_FILE_SIZE) {
+            System.out.println("File too large: " + file.getName());
+            return false;
+        }
+        
+        // Check file extension
+        String fileName = file.getName().toLowerCase();
+        for (String format : SUPPORTED_FORMATS) {
+            if (fileName.endsWith(format)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Get file extension
+     */
+    public static String getFileExtension(String fileName) {
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex > 0 && lastDotIndex < fileName.length() - 1) {
+            return fileName.substring(lastDotIndex);
+        }
+        return "";
+    }
+    
+    /**
+     * Copy file from source to destination
+     */
+    public static void copyFile(File source, File destination) throws Exception {
+        java.nio.file.Files.copy(source.toPath(), destination.toPath(), 
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    }
+    
+    /**
+     * Load and scale image to specified dimensions
+     */
+    public static ImageIcon loadAndScaleImage(File imageFile, int width, int height) {
+        try {
+            ImageIcon originalIcon = new ImageIcon(imageFile.getAbsolutePath());
+            if (originalIcon.getImage() != null) {
+                Image scaledImage = originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(scaledImage);
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading image: " + imageFile.getName() + " - " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Load image with preserved aspect ratio, targeting a specific maximum size
+     */
+    public static ImageIcon loadAndScaleImagePreserveAspect(File imageFile, int maxSize) {
+        try {
+            ImageIcon originalIcon = new ImageIcon(imageFile.getAbsolutePath());
+            if (originalIcon.getImage() != null) {
+                int originalWidth = originalIcon.getIconWidth();
+                int originalHeight = originalIcon.getIconHeight();
+                
+                // If original image is reasonable size, use it directly (more generous range)
+                if (originalWidth <= maxSize && originalHeight <= maxSize && 
+                    originalWidth >= maxSize/4 && originalHeight >= maxSize/4) {
+                    return originalIcon;
+                }
+                
+                // Calculate new dimensions preserving aspect ratio
+                double aspectRatio = (double) originalWidth / originalHeight;
+                int newWidth, newHeight;
+                
+                if (originalWidth > originalHeight) {
+                    newWidth = maxSize;
+                    newHeight = (int) (maxSize / aspectRatio);
+                } else {
+                    newHeight = maxSize;
+                    newWidth = (int) (maxSize * aspectRatio);
+                }
+                
+                Image scaledImage = originalIcon.getImage().getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+                return new ImageIcon(scaledImage);
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading image: " + imageFile.getName() + " - " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Create directory structure for character set
+     */
+    public static boolean createCharacterSetDirectoryStructure(String setPath) {
+        try {
+            // Main set directory
+            File setDir = new File(setPath);
+            if (!setDir.exists() && !setDir.mkdirs()) {
+                return false;
+            }
+            
+            // Animation subdirectories
+            String[] animationTypes = {"idle", "walking", "special", "pain"};
+            for (String animationType : animationTypes) {
+                File animationDir = new File(setDir, animationType);
+                if (!animationDir.exists() && !animationDir.mkdirs()) {
+                    return false;
+                }
+            }
+            
+            System.out.println("Created character set directory structure: " + setPath);
+            return true;
+            
+        } catch (Exception e) {
+            System.out.println("Error creating directory structure: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Delete character set directory and all contents
+     */
+    public static boolean deleteCharacterSet(String setPath) {
+        try {
+            File setDir = new File(setPath);
+            return deleteDirectoryRecursively(setDir);
+        } catch (Exception e) {
+            System.out.println("Error deleting character set: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    private static boolean deleteDirectoryRecursively(File directory) {
+        if (directory.isDirectory()) {
+            File[] files = directory.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    deleteDirectoryRecursively(file);
+                }
+            }
+        }
+        return directory.delete();
+    }
+}
+
+// ============================================================================
+// CHARACTER IMPORT SYSTEM - IMPORT WINDOW UI
+// ============================================================================
+
+/**
+ * Character Set Item for dropdown with name and thumbnail
+ */
+class CharacterSetItem {
+    private String name;
+    private ImageIcon thumbnail;
+    private boolean isNewItem;
+    
+    public CharacterSetItem(String name, ImageIcon thumbnail) {
+        this.name = name;
+        this.thumbnail = thumbnail;
+        this.isNewItem = false;
+    }
+    
+    public CharacterSetItem(String name) {
+        this.name = name;
+        this.thumbnail = null;
+        this.isNewItem = name.equals("-- Create New --");
+    }
+    
+    public String getName() { return name; }
+    public ImageIcon getThumbnail() { return thumbnail; }
+    public boolean isNewItem() { return isNewItem; }
+    
+    @Override
+    public String toString() { return name; }
+}
+
+/**
+ * Custom combo box renderer for character sets
+ */
+class CharacterSetComboRenderer extends DefaultListCellRenderer {
+    private static final int THUMBNAIL_SIZE = 32;
+    
+    @Override
+    public Component getListCellRendererComponent(
+            JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+        
+        super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+        
+        if (value instanceof CharacterSetItem) {
+            CharacterSetItem item = (CharacterSetItem) value;
+            setText(item.getName());
+            
+            if (item.getThumbnail() != null) {
+                // Scale thumbnail to fit
+                Image img = item.getThumbnail().getImage();
+                Image scaledImg = img.getScaledInstance(THUMBNAIL_SIZE, THUMBNAIL_SIZE, Image.SCALE_SMOOTH);
+                setIcon(new ImageIcon(scaledImg));
+            } else {
+                setIcon(null);
+            }
+        }
+        
+        return this;
+    }
+}
+
+/**
+ * Dedicated window for importing and managing character sets
+ */
+class CharacterImportWindow extends JFrame {
+    private static final int WINDOW_WIDTH = 800;
+    private static final int WINDOW_HEIGHT = 600;
+    private static final int PREVIEW_SIZE = 150;
+    
+    private CharacterSetManager characterSetManager;
+    private CharacterSet currentWorkingSet;
+    private String currentSetType; // "pet" or "enemy"
+    
+    // UI Components
+    private JTextField setNameField;
+    private JTextField authorField;
+    private JTextArea descriptionArea;
+    private JComboBox<String> setTypeCombo;
+    private JComboBox<CharacterSetItem> existingSetCombo;
+    
+    // Animation panels
+    private AnimationImportPanel idlePanel;
+    private AnimationImportPanel walkingPanel;
+    private AnimationImportPanel specialPanel;
+    private AnimationImportPanel painPanel;
+    
+    // Preview panel
+    private JPanel previewPanel;
+    private JLabel previewLabel;
+    private Timer previewTimer;
+    private int previewFrameIndex = 0;
+    
+    // Control buttons
+    private JButton importButton;
+    private JButton exportButton;
+    private JButton saveButton;
+    private JButton deleteButton;
+    private JButton testButton;
+    private JButton editButton;
+    private JButton setDefaultButton;
+    
+    public CharacterImportWindow() {
+        super("Character Set Import Manager");
+        
+        characterSetManager = CharacterSetManager.getInstance();
+        currentSetType = "pet";
+        
+        initializeUI();
+        initializeEventHandlers();
+        
+        // Load existing character sets
+        refreshExistingSetsList();
+        
+        // Create new empty set by default
+        createNewCharacterSet();
+        
+        System.out.println("Character Import Window initialized");
+        
+        // Add periodic timer to ensure pet keeps moving while import window is active
+        Timer petActivityTimer = new Timer(5000, e -> {
+            if (isVisible()) {
+                // Find all pets and ensure they remain active
+                for (AdvancedDesktopPet pet : AdvancedDesktopPet.getAllPets()) {
+                    pet.ensureTimersActive();
+                }
+            }
+        });
+        petActivityTimer.start();
+        
+        // Stop the timer when window is closed
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                petActivityTimer.stop();
+            }
+        });
+    }
+    
+    private void initializeUI() {
+        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+        setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        setLocationRelativeTo(null);
+        
+        // Create main layout
+        setLayout(new BorderLayout());
+        
+        // Create header panel
+        JPanel headerPanel = createHeaderPanel();
+        add(headerPanel, BorderLayout.NORTH);
+        
+        // Create main content panel
+        JPanel contentPanel = createContentPanel();
+        add(contentPanel, BorderLayout.CENTER);
+        
+        // Create footer panel
+        JPanel footerPanel = createFooterPanel();
+        add(footerPanel, BorderLayout.SOUTH);
+        
+        // Initialize preview timer
+        previewTimer = new Timer(200, e -> updatePreview());
+    }
+    
+    private JPanel createHeaderPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        panel.setBorder(BorderFactory.createTitledBorder("Character Set Information"));
+        
+        // Set type selection
+        gbc.gridx = 0; gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        panel.add(new JLabel("Type:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        setTypeCombo = new JComboBox<>(new String[]{"Pet Character", "Enemy Character"});
+        panel.add(setTypeCombo, gbc);
+        
+        // Existing sets
+        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Existing Sets:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        existingSetCombo = new JComboBox<>();
+        existingSetCombo.setEditable(false);
+        existingSetCombo.setRenderer(new CharacterSetComboRenderer());
+        panel.add(existingSetCombo, gbc);
+        
+        // Set name
+        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Set Name:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        setNameField = new JTextField();
+        panel.add(setNameField, gbc);
+        
+        // Author
+        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel("Author:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        authorField = new JTextField();
+        panel.add(authorField, gbc);
+        
+        // Description
+        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        panel.add(new JLabel("Description:"), gbc);
+        
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 1.0; gbc.weighty = 1.0;
+        descriptionArea = new JTextArea(3, 20);
+        descriptionArea.setLineWrap(true);
+        descriptionArea.setWrapStyleWord(true);
+        JScrollPane descScrollPane = new JScrollPane(descriptionArea);
+        panel.add(descScrollPane, gbc);
+        
+        return panel;
+    }
+    
+    private JPanel createContentPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        
+        // Create left panel for animations
+        JPanel leftPanel = createAnimationPanel();
+        panel.add(leftPanel, BorderLayout.CENTER);
+        
+        // Create right panel for preview
+        JPanel rightPanel = createPreviewPanel();
+        panel.add(rightPanel, BorderLayout.EAST);
+        
+        return panel;
+    }
+    
+    private JPanel createAnimationPanel() {
+        JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
+        panel.setBorder(BorderFactory.createTitledBorder("Animation Import"));
+        
+        // Create animation import panels
+        idlePanel = new AnimationImportPanel("Idle Animation", true);
+        walkingPanel = new AnimationImportPanel("Walking Animation", true);
+        specialPanel = new AnimationImportPanel("Special Animation", false);
+        painPanel = new AnimationImportPanel("Pain Animation", false);
+        
+        panel.add(idlePanel);
+        panel.add(walkingPanel);
+        panel.add(specialPanel);
+        panel.add(painPanel);
+        
+        return panel;
+    }
+    
+    private JPanel createPreviewPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createTitledBorder("Preview"));
+        panel.setPreferredSize(new Dimension(200, 0));
+        
+        // Preview display
+        previewPanel = new JPanel(new BorderLayout());
+        previewPanel.setPreferredSize(new Dimension(PREVIEW_SIZE, PREVIEW_SIZE));
+        previewPanel.setBorder(BorderFactory.createLoweredBevelBorder());
+        
+        previewLabel = new JLabel();
+        previewLabel.setHorizontalAlignment(JLabel.CENTER);
+        previewLabel.setVerticalAlignment(JLabel.CENTER);
+        previewPanel.add(previewLabel, BorderLayout.CENTER);
+        
+        panel.add(previewPanel, BorderLayout.NORTH);
+        
+        // Preview controls
+        JPanel controlPanel = new JPanel(new GridLayout(5, 1, 5, 5));
+        controlPanel.setBorder(BorderFactory.createTitledBorder("Preview Controls"));
+        
+        JButton previewIdleBtn = new JButton("Preview Idle");
+        JButton previewWalkBtn = new JButton("Preview Walk");
+        JButton previewSpecialBtn = new JButton("Preview Special");
+        JButton previewPainBtn = new JButton("Preview Pain");
+        JButton stopPreviewBtn = new JButton("Stop Preview");
+        
+        controlPanel.add(previewIdleBtn);
+        controlPanel.add(previewWalkBtn);
+        controlPanel.add(previewSpecialBtn);
+        controlPanel.add(previewPainBtn);
+        controlPanel.add(stopPreviewBtn);
+        
+        panel.add(controlPanel, BorderLayout.CENTER);
+        
+        // Add preview event handlers
+        previewIdleBtn.addActionListener(e -> startPreview("idle"));
+        previewWalkBtn.addActionListener(e -> startPreview("walking"));
+        previewSpecialBtn.addActionListener(e -> startPreview("special"));
+        previewPainBtn.addActionListener(e -> startPreview("pain"));
+        stopPreviewBtn.addActionListener(e -> stopPreview());
+        
+        return panel;
+    }
+    
+    private JPanel createFooterPanel() {
+        JPanel panel = new JPanel(new FlowLayout());
+        
+        importButton = new JButton("Import Images");
+        exportButton = new JButton("Export Set");
+        saveButton = new JButton("Save Set");
+        deleteButton = new JButton("Delete Set");
+        testButton = new JButton("Test in Pet");
+        editButton = new JButton("Edit Properties");
+        setDefaultButton = new JButton("Set as Default");
+        JButton closeButton = new JButton("Close");
+        
+        panel.add(importButton);
+        panel.add(exportButton);
+        panel.add(saveButton);
+        panel.add(deleteButton);
+        panel.add(testButton);
+        panel.add(editButton);
+        panel.add(setDefaultButton);
+        panel.add(closeButton);
+        
+        closeButton.addActionListener(e -> setVisible(false));
+        
+        return panel;
+    }
+    
+    private void initializeEventHandlers() {
+        // Set type change
+        setTypeCombo.addActionListener(e -> {
+            currentSetType = setTypeCombo.getSelectedIndex() == 0 ? "pet" : "enemy";
+            refreshExistingSetsList();
+        });
+        
+        // Existing set selection
+        existingSetCombo.addActionListener(e -> {
+            CharacterSetItem selectedItem = (CharacterSetItem) existingSetCombo.getSelectedItem();
+            if (selectedItem != null && !selectedItem.isNewItem()) {
+                loadExistingCharacterSet(selectedItem.getName());
+            }
+        });
+        
+        // Save button
+        saveButton.addActionListener(e -> saveCurrentCharacterSet());
+        
+        // Delete button
+        deleteButton.addActionListener(e -> deleteCurrentCharacterSet());
+        
+        // Test button
+        testButton.addActionListener(e -> testCharacterSetInPet());
+        
+        // Import button
+        importButton.addActionListener(e -> importImagesDialog());
+        
+        // Export button
+        exportButton.addActionListener(e -> exportCharacterSet());
+        
+        // Edit button
+        editButton.addActionListener(e -> openCharacterEditDialog());
+        
+        // Set Default button
+        setDefaultButton.addActionListener(e -> setCurrentCharacterAsDefault());
+    }
+    
+    private void setCurrentCharacterAsDefault() {
+        if (currentWorkingSet == null) {
+            JOptionPane.showMessageDialog(this, 
+                "No character set selected. Please select or create a character set first.", 
+                "No Character Set", 
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        String setName = currentWorkingSet.getName();
+        
+        try {
+            if (currentSetType.equals("pet")) {
+                characterSetManager.setDefaultPetCharacterSet(setName);
+                JOptionPane.showMessageDialog(this, 
+                    "Set default pet character to: " + setName + "\n" +
+                    "This character will be used when the program starts.", 
+                    "Default Pet Set", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                characterSetManager.setDefaultEnemyCharacterSet(setName);
+                JOptionPane.showMessageDialog(this, 
+                    "Set default enemy character to: " + setName + "\n" +
+                    "This character will be used for new enemies.", 
+                    "Default Enemy Set", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+            System.out.println("Successfully set default " + currentSetType + " character to: " + setName);
+            
+        } catch (Exception ex) {
+            System.out.println("Error setting default character: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, 
+                "Error setting default character: " + ex.getMessage(), 
+                "Error", 
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void refreshExistingSetsList() {
+        existingSetCombo.removeAllItems();
+        existingSetCombo.addItem(new CharacterSetItem("-- Create New --"));
+        
+        Set<String> setNames = currentSetType.equals("pet") ? 
+            characterSetManager.getPetCharacterSetNames() : 
+            characterSetManager.getEnemyCharacterSetNames();
+        
+        for (String setName : setNames) {
+            ImageIcon thumbnail = getCharacterSetThumbnail(setName, currentSetType.equals("pet"));
+            existingSetCombo.addItem(new CharacterSetItem(setName, thumbnail));
+        }
+    }
+    
+    /**
+     * Get thumbnail image for a character set
+     */
+    private ImageIcon getCharacterSetThumbnail(String setName, boolean isPet) {
+        try {
+            CharacterSet characterSet = isPet ? 
+                characterSetManager.getPetCharacterSet(setName) : 
+                characterSetManager.getEnemyCharacterSet(setName);
+            
+            if (characterSet != null) {
+                // Try to get thumbnail from idle animation first
+                AnimationSequence idleSeq = characterSet.getIdleAnimation();
+                if (idleSeq != null && idleSeq.getFrameCount() > 0) {
+                    return idleSeq.getFrames().get(0).getImage();
+                }
+                
+                // If no idle animation, try walking animation
+                AnimationSequence walkSeq = characterSet.getWalkingAnimation();
+                if (walkSeq != null && walkSeq.getFrameCount() > 0) {
+                    return walkSeq.getFrames().get(0).getImage();
+                }
+                
+                // If no walking animation, try any other animation
+                AnimationSequence specialSeq = characterSet.getSpecialAnimation();
+                if (specialSeq != null && specialSeq.getFrameCount() > 0) {
+                    return specialSeq.getFrames().get(0).getImage();
+                }
+                
+                AnimationSequence painSeq = characterSet.getPainAnimation();
+                if (painSeq != null && painSeq.getFrameCount() > 0) {
+                    return painSeq.getFrames().get(0).getImage();
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error getting thumbnail for " + setName + ": " + e.getMessage());
+        }
+        
+        return null; // No thumbnail available
+    }
+    
+    private void createNewCharacterSet() {
+        String setName = "New_" + currentSetType + "_" + System.currentTimeMillis();
+        String setPath = "resources/CharacterSets/" + 
+                         (currentSetType.equals("pet") ? "Pets" : "Enemies") + "/" + setName + "/";
+        
+        currentWorkingSet = new CharacterSet(setName, setPath);
+        
+        // Update UI
+        setNameField.setText(setName);
+        authorField.setText("");
+        descriptionArea.setText("");
+        
+        // Clear animation panels
+        idlePanel.clearImages();
+        walkingPanel.clearImages();
+        specialPanel.clearImages();
+        painPanel.clearImages();
+        
+        System.out.println("Created new character set: " + setName + " at path: " + setPath);
+    }
+    
+    private void loadExistingCharacterSet(String setName) {
+        try {
+            // Load the SPECIFIC character set that was selected, not the current one
+            currentWorkingSet = currentSetType.equals("pet") ? 
+                characterSetManager.getPetCharacterSet(setName) : 
+                characterSetManager.getEnemyCharacterSet(setName);
+            
+            if (currentWorkingSet != null) {
+                System.out.println("Loading character set: " + setName + " (Type: " + currentSetType + ")");
+                
+                // Update UI with character set data
+                setNameField.setText(currentWorkingSet.getName());
+                authorField.setText(currentWorkingSet.getAuthorName());
+                descriptionArea.setText(currentWorkingSet.getDescription());
+                
+                // Load animation frames into panels
+                loadAnimationFramesIntoPanel(currentWorkingSet.getIdleAnimation(), idlePanel);
+                loadAnimationFramesIntoPanel(currentWorkingSet.getWalkingAnimation(), walkingPanel);
+                loadAnimationFramesIntoPanel(currentWorkingSet.getSpecialAnimation(), specialPanel);
+                loadAnimationFramesIntoPanel(currentWorkingSet.getPainAnimation(), painPanel);
+                
+                // Automatically switch the pet to use this character set
+                if (currentSetType.equals("pet")) {
+                    characterSetManager.setCurrentPetCharacterSet(setName);
+                    
+                    // Force reload animations on all pets to apply the new character set
+                    for (AdvancedDesktopPet pet : AdvancedDesktopPet.getAllPets()) {
+                        pet.reloadAnimations(); // This will trigger auto-resize
+                    }
+                    
+                    System.out.println("Automatically switched pet to character set: " + setName);
+                } else {
+                    characterSetManager.setCurrentEnemyCharacterSet(setName);
+                    
+                    // Reload enemy images with new character set
+                    for (AdvancedDesktopPet pet : AdvancedDesktopPet.getAllPets()) {
+                        pet.switchCharacterSet(setName, false);
+                    }
+                    
+                    System.out.println("Automatically switched enemies to character set: " + setName);
+                }
+                
+            } else {
+                System.out.println("Character set not found: " + setName);
+                JOptionPane.showMessageDialog(this, "Character set not found: " + setName, 
+                                            "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Error loading character set: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading character set: " + e.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void loadAnimationFramesIntoPanel(AnimationSequence sequence, AnimationImportPanel panel) {
+        panel.clearImages();
+        
+        for (AnimationFrame frame : sequence.getFrames()) {
+            panel.addImage(frame.getImage());
+        }
+    }
+    
+    private void saveCurrentCharacterSet() {
+        if (currentWorkingSet == null) {
+            System.out.println("Cannot save: currentWorkingSet is null");
+            return;
+        }
+        
+        try {
+            // Update character set with UI data
+            String newName = setNameField.getText().trim();
+            if (newName.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Character set name cannot be empty!", 
+                                            "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            currentWorkingSet.setName(newName);
+            currentWorkingSet.setAuthorName(authorField.getText().trim());
+            currentWorkingSet.setDescription(descriptionArea.getText().trim());
+            
+            // Update the set path if the name changed
+            String newPath = "resources/CharacterSets/" + 
+                           (currentSetType.equals("pet") ? "Pets" : "Enemies") + "/" + newName + "/";
+            currentWorkingSet.setSetPath(newPath);
+            
+            System.out.println("Saving character set: " + newName + " to " + newPath);
+            
+            // Create directory structure
+            boolean dirCreated = CharacterFileManager.createCharacterSetDirectoryStructure(newPath);
+            if (!dirCreated) {
+                throw new Exception("Failed to create directory structure");
+            }
+            
+            // Save animation frames
+            saveAnimationFrames(currentWorkingSet.getIdleAnimation(), idlePanel, "idle");
+            saveAnimationFrames(currentWorkingSet.getWalkingAnimation(), walkingPanel, "walking");
+            saveAnimationFrames(currentWorkingSet.getSpecialAnimation(), specialPanel, "special");
+            saveAnimationFrames(currentWorkingSet.getPainAnimation(), painPanel, "pain");
+            
+            // Save metadata
+            boolean metadataSaved = CharacterFileManager.saveCharacterSetMetadata(currentWorkingSet);
+            if (!metadataSaved) {
+                throw new Exception("Failed to save metadata");
+            }
+            
+            // Add to manager
+            if (currentSetType.equals("pet")) {
+                characterSetManager.addPetCharacterSet(currentWorkingSet);
+                System.out.println("Added pet character set to manager: " + newName);
+            } else {
+                characterSetManager.addEnemyCharacterSet(currentWorkingSet);
+                System.out.println("Added enemy character set to manager: " + newName);
+            }
+            
+            // Force the manager to reload from disk to ensure persistence
+            characterSetManager.loadCharacterSetsFromDisk();
+            
+            JOptionPane.showMessageDialog(this, "Character set '" + newName + "' saved successfully!", 
+                                        "Success", JOptionPane.INFORMATION_MESSAGE);
+            
+            refreshExistingSetsList();
+            
+        } catch (Exception e) {
+            System.out.println("Error saving character set: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error saving character set: " + e.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void saveAnimationFrames(AnimationSequence sequence, AnimationImportPanel panel, String animationType) {
+        // Clear existing frames
+        sequence.getFrames().clear();
+        
+        // Add new frames from panel
+        List<ImageIcon> images = panel.getImages();
+        for (int i = 0; i < images.size(); i++) {
+            ImageIcon image = images.get(i);
+            String framePath = currentWorkingSet.getSetPath() + animationType + "/" + 
+                              animationType + "_frame_" + String.format("%03d", i) + ".png";
+            
+            // Actually save the image to disk
+            boolean saved = saveImageIconToFile(image, framePath);
+            if (saved) {
+                AnimationFrame frame = new AnimationFrame(image, framePath, 150); // Default duration
+                sequence.addFrame(frame);
+                System.out.println("Saved frame: " + framePath);
+            } else {
+                System.out.println("Failed to save frame: " + framePath);
+            }
+        }
+    }
+    
+    /**
+     * Save an ImageIcon to a file on disk
+     */
+    private boolean saveImageIconToFile(ImageIcon imageIcon, String filePath) {
+        try {
+            // Create parent directories if they don't exist
+            File file = new File(filePath);
+            File parentDir = file.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+            
+            // Convert ImageIcon to BufferedImage
+            Image image = imageIcon.getImage();
+            BufferedImage bufferedImage = new BufferedImage(
+                image.getWidth(null), 
+                image.getHeight(null), 
+                BufferedImage.TYPE_INT_ARGB
+            );
+            
+            Graphics2D g2d = bufferedImage.createGraphics();
+            g2d.drawImage(image, 0, 0, null);
+            g2d.dispose();
+            
+            // Save as PNG file
+            return ImageIO.write(bufferedImage, "png", file);
+            
+        } catch (Exception e) {
+            System.out.println("Error saving image to file: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    private void deleteCurrentCharacterSet() {
+        if (currentWorkingSet == null) return;
+        
+        int result = JOptionPane.showConfirmDialog(this, 
+            "Are you sure you want to delete this character set?", 
+            "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        
+        if (result == JOptionPane.YES_OPTION) {
+            try {
+                String setName = currentWorkingSet.getName();
+                String setPath = currentWorkingSet.getSetPath();
+                
+                // Delete from disk
+                CharacterFileManager.deleteCharacterSet(setPath);
+                
+                // Remove from manager
+                boolean removed = false;
+                if (currentSetType.equals("pet")) {
+                    removed = characterSetManager.removePetCharacterSet(setName);
+                } else {
+                    removed = characterSetManager.removeEnemyCharacterSet(setName);
+                }
+                
+                if (removed) {
+                    JOptionPane.showMessageDialog(this, "Character set '" + setName + "' deleted successfully!", 
+                                                "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Character set deleted from disk but could not be removed from memory.", 
+                                                "Partial Success", JOptionPane.WARNING_MESSAGE);
+                }
+                
+                // Create new set
+                createNewCharacterSet();
+                refreshExistingSetsList();
+                
+            } catch (Exception e) {
+                System.out.println("Error deleting character set: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Error deleting character set: " + e.getMessage(), 
+                                            "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    private void testCharacterSetInPet() {
+        if (currentWorkingSet == null) return;
+        
+        // First save the current set
+        saveCurrentCharacterSet();
+        
+        try {
+            // Switch to this character set
+            if (currentSetType.equals("pet")) {
+                characterSetManager.setCurrentPetCharacterSet(currentWorkingSet.getName());
+            } else {
+                characterSetManager.setCurrentEnemyCharacterSet(currentWorkingSet.getName());
+            }
+            
+            // Force reload animations to apply the new character set
+            if (!AdvancedDesktopPet.getAllPets().isEmpty()) {
+                AdvancedDesktopPet mainPet = AdvancedDesktopPet.getAllPets().get(0);
+                mainPet.reloadAnimations(); // This will trigger auto-resize
+            }
+            
+            String message = "Character set applied to pet! Check your desktop pet.\n" +
+                            "The pet window has been automatically resized to fit your character images.";
+            
+            if (currentSetType.equals("enemy")) {
+                message += "\n\nNOTE: To see enemy characters, you need to enable the enemy system in Settings > Horror Mode > Enable Enemies";
+            }
+            
+            JOptionPane.showMessageDialog(this, 
+                message, 
+                "Success", JOptionPane.INFORMATION_MESSAGE);
+            
+        } catch (Exception e) {
+            System.out.println("Error testing character set: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error testing character set: " + e.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void importImagesDialog() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+            "Image Files", "png", "jpg", "jpeg", "gif"));
+        
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File[] selectedFiles = fileChooser.getSelectedFiles();
+            
+            // Show dialog to select animation type
+            String[] options = {"Idle", "Walking", "Special", "Pain"};
+            String selectedType = (String) JOptionPane.showInputDialog(this, 
+                "Select animation type for these images:", "Animation Type", 
+                JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+            
+            if (selectedType != null) {
+                importImagesForAnimation(selectedFiles, selectedType.toLowerCase());
+            }
+        }
+    }
+    
+    private void importImagesForAnimation(File[] files, String animationType) {
+        try {
+            AnimationImportPanel targetPanel = null;
+            
+            switch (animationType) {
+                case "idle":
+                    targetPanel = idlePanel;
+                    break;
+                case "walking":
+                    targetPanel = walkingPanel;
+                    break;
+                case "special":
+                    targetPanel = specialPanel;
+                    break;
+                case "pain":
+                    targetPanel = painPanel;
+                    break;
+            }
+            
+            if (targetPanel != null) {
+                for (File file : files) {
+                    if (CharacterFileManager.isValidImageFile(file)) {
+                        ImageIcon image = CharacterFileManager.loadAndScaleImagePreserveAspect(file, 256);
+                        if (image != null) {
+                            targetPanel.addImage(image);
+                        }
+                    }
+                }
+                
+                JOptionPane.showMessageDialog(this, "Images imported successfully!", 
+                                            "Success", JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Error importing images: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error importing images: " + e.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void exportCharacterSet() {
+        if (currentWorkingSet == null) return;
+        
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        
+        int result = fileChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedDir = fileChooser.getSelectedFile();
+            
+            try {
+                // Export functionality would be implemented here
+                JOptionPane.showMessageDialog(this, "Export functionality coming soon!", 
+                                            "Info", JOptionPane.INFORMATION_MESSAGE);
+                
+            } catch (Exception e) {
+                System.out.println("Error exporting character set: " + e.getMessage());
+                JOptionPane.showMessageDialog(this, "Error exporting character set: " + e.getMessage(), 
+                                            "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    /**
+     * Open character edit dialog for modifying properties
+     */
+    private void openCharacterEditDialog() {
+        if (currentWorkingSet == null) {
+            JOptionPane.showMessageDialog(this, "Please create or select a character set first.", 
+                                        "No Character Set", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        CharacterEditDialog editDialog = new CharacterEditDialog(this, currentWorkingSet, currentSetType);
+        editDialog.setVisible(true);
+        
+        if (editDialog.isConfirmed()) {
+            // Refresh the UI with updated data
+            setNameField.setText(currentWorkingSet.getName());
+            authorField.setText(currentWorkingSet.getAuthorName());
+            descriptionArea.setText(currentWorkingSet.getDescription());
+            
+            // Update set type if changed
+            String newType = editDialog.getSelectedType();
+            if (!newType.equals(currentSetType)) {
+                currentSetType = newType;
+                setTypeCombo.setSelectedIndex(newType.equals("pet") ? 0 : 1);
+                refreshExistingSetsList();
+            }
+            
+            // Refresh animation panels if images were modified
+            loadAnimationFramesIntoPanel(currentWorkingSet.getIdleAnimation(), idlePanel);
+            loadAnimationFramesIntoPanel(currentWorkingSet.getWalkingAnimation(), walkingPanel);
+            loadAnimationFramesIntoPanel(currentWorkingSet.getSpecialAnimation(), specialPanel);
+            loadAnimationFramesIntoPanel(currentWorkingSet.getPainAnimation(), painPanel);
+        }
+    }
+    
+    private String currentPreviewType = "";
+    
+    private void stopPreview() {
+        previewTimer.stop();
+        previewLabel.setIcon(null);
+        previewLabel.setText("Preview stopped");
+        currentPreviewType = "";
+        System.out.println("Preview stopped");
+    }
+    
+    private void startPreview(String animationType) {
+        if (currentWorkingSet == null) return;
+        
+        previewTimer.stop();
+        currentPreviewType = animationType;
+        
+        AnimationSequence sequence = currentWorkingSet.getAnimationByName(animationType);
+        if (sequence != null && sequence.getFrameCount() > 0) {
+            previewFrameIndex = 0;
+            sequence.reset();
+            previewTimer.start();
+            System.out.println("Started preview for: " + animationType + " with " + sequence.getFrameCount() + " frames");
+        } else {
+            // If no character set sequence, try to get from panels
+            AnimationImportPanel panel = getAnimationPanel(animationType);
+            if (panel != null && panel.getImageCount() > 0) {
+                previewFrameIndex = 0;
+                previewTimer.start();
+                System.out.println("Started preview from panel for: " + animationType + " with " + panel.getImageCount() + " images");
+            } else {
+                System.out.println("No images found for preview: " + animationType);
+            }
+        }
+    }
+    
+    private AnimationImportPanel getAnimationPanel(String animationType) {
+        switch (animationType.toLowerCase()) {
+            case "idle": return idlePanel;
+            case "walking": return walkingPanel;
+            case "special": return specialPanel;
+            case "pain": return painPanel;
+            default: return null;
+        }
+    }
+    
+    private void updatePreview() {
+        if (currentWorkingSet == null || currentPreviewType.isEmpty()) return;
+        
+        try {
+            // First try to get from character set
+            AnimationSequence sequence = currentWorkingSet.getAnimationByName(currentPreviewType);
+            if (sequence != null && sequence.getFrameCount() > 0) {
+                AnimationFrame frame = sequence.getFrames().get(previewFrameIndex);
+                if (frame != null && frame.getImage() != null) {
+                    // Scale image to fit preview panel
+                    Image img = frame.getImage().getImage();
+                    Image scaledImg = img.getScaledInstance(PREVIEW_SIZE, PREVIEW_SIZE, Image.SCALE_SMOOTH);
+                    previewLabel.setIcon(new ImageIcon(scaledImg));
+                    
+                    // Move to next frame
+                    previewFrameIndex++;
+                    if (previewFrameIndex >= sequence.getFrameCount()) {
+                        previewFrameIndex = 0; // Loop back to start
+                    }
+                    
+                    // Update timer delay based on frame duration
+                    previewTimer.setDelay(frame.getDuration());
+                    return;
+                }
+            }
+            
+            // If character set doesn't have frames, try to get from panels
+            AnimationImportPanel panel = getAnimationPanel(currentPreviewType);
+            if (panel != null && panel.getImageCount() > 0) {
+                List<ImageIcon> images = panel.getImages();
+                if (previewFrameIndex < images.size()) {
+                    ImageIcon frameImage = images.get(previewFrameIndex);
+                    if (frameImage != null) {
+                        // Scale image to fit preview panel
+                        Image img = frameImage.getImage();
+                        Image scaledImg = img.getScaledInstance(PREVIEW_SIZE, PREVIEW_SIZE, Image.SCALE_SMOOTH);
+                        previewLabel.setIcon(new ImageIcon(scaledImg));
+                        
+                        // Move to next frame
+                        previewFrameIndex++;
+                        if (previewFrameIndex >= images.size()) {
+                            previewFrameIndex = 0; // Loop back to start
+                        }
+                        
+                        // Use default delay for panel images
+                        previewTimer.setDelay(200);
+                        return;
+                    }
+                }
+            }
+            
+            // If we get here, no valid frames found
+            previewTimer.stop();
+            previewLabel.setIcon(null);
+            previewLabel.setText("No frames available");
+            System.out.println("No frames available for preview: " + currentPreviewType);
+            
+        } catch (Exception e) {
+            System.out.println("Error in preview update: " + e.getMessage());
+            previewTimer.stop();
+        }
+    }
+}
+
+/**
+ * Character Edit Dialog for modifying character properties
+ */
+class CharacterEditDialog extends JDialog {
+    private CharacterSet characterSet;
+    private String originalType;
+    private boolean confirmed = false;
+    
+    private JTextField nameField;
+    private JTextField authorField;
+    private JTextArea descriptionField;
+    private JComboBox<String> typeCombo;
+    private JButton flipAllIdleBtn;
+    private JButton flipAllWalkingBtn;
+    private JButton flipAllSpecialBtn;
+    private JButton flipAllPainBtn;
+    private JButton replaceIdleBtn;
+    private JButton replaceWalkingBtn;
+    private JButton replaceSpecialBtn;
+    private JButton replaceePainBtn;
+    
+    public CharacterEditDialog(JFrame parent, CharacterSet characterSet, String currentType) {
+        super(parent, "Edit Character Properties", true);
+        this.characterSet = characterSet;
+        this.originalType = currentType;
+        
+        initializeUI();
+        loadCurrentData();
+    }
+    
+    private void initializeUI() {
+        setSize(500, 400);
+        setLocationRelativeTo(getParent());
+        setLayout(new BorderLayout());
+        
+        // Create main panel
+        JPanel mainPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        
+        // Name field
+        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
+        mainPanel.add(new JLabel("Name:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        nameField = new JTextField(20);
+        mainPanel.add(nameField, gbc);
+        
+        // Author field
+        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        mainPanel.add(new JLabel("Author:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        authorField = new JTextField(20);
+        mainPanel.add(authorField, gbc);
+        
+        // Type combo
+        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        mainPanel.add(new JLabel("Type:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0;
+        typeCombo = new JComboBox<>(new String[]{"pet", "enemy"});
+        mainPanel.add(typeCombo, gbc);
+        
+        // Description field
+        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        mainPanel.add(new JLabel("Description:"), gbc);
+        gbc.gridx = 1; gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 1.0; gbc.weighty = 0.3;
+        descriptionField = new JTextArea(3, 20);
+        descriptionField.setLineWrap(true);
+        descriptionField.setWrapStyleWord(true);
+        JScrollPane descScrollPane = new JScrollPane(descriptionField);
+        mainPanel.add(descScrollPane, gbc);
+        
+        // Image direction controls
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; gbc.weighty = 0.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        JPanel flipPanel = createFlipPanel();
+        mainPanel.add(flipPanel, gbc);
+        
+        // Image replacement controls  
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weighty = 0.0;
+        JPanel replacePanel = createReplacePanel();
+        mainPanel.add(replacePanel, gbc);
+        
+        add(mainPanel, BorderLayout.CENTER);
+        
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JButton okButton = new JButton("OK");
+        JButton cancelButton = new JButton("Cancel");
+        
+        okButton.addActionListener(e -> {
+            saveChanges();
+            confirmed = true;
+            setVisible(false);
+        });
+        
+        cancelButton.addActionListener(e -> {
+            confirmed = false;
+            setVisible(false);
+        });
+        
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+    
+    private JPanel createFlipPanel() {
+        JPanel panel = new JPanel(new GridLayout(2, 2, 5, 5));
+        panel.setBorder(BorderFactory.createTitledBorder("Flip Images Horizontally"));
+        
+        flipAllIdleBtn = new JButton("Flip Idle");
+        flipAllWalkingBtn = new JButton("Flip Walking");
+        flipAllSpecialBtn = new JButton("Flip Special");
+        flipAllPainBtn = new JButton("Flip Pain");
+        
+        flipAllIdleBtn.addActionListener(e -> flipAnimationImages("idle"));
+        flipAllWalkingBtn.addActionListener(e -> flipAnimationImages("walking"));
+        flipAllSpecialBtn.addActionListener(e -> flipAnimationImages("special"));
+        flipAllPainBtn.addActionListener(e -> flipAnimationImages("pain"));
+        
+        panel.add(flipAllIdleBtn);
+        panel.add(flipAllWalkingBtn);
+        panel.add(flipAllSpecialBtn);
+        panel.add(flipAllPainBtn);
+        
+        return panel;
+    }
+    
+    private JPanel createReplacePanel() {
+        JPanel panel = new JPanel(new GridLayout(2, 2, 5, 5));
+        panel.setBorder(BorderFactory.createTitledBorder("Replace Animation Images"));
+        
+        replaceIdleBtn = new JButton("Replace Idle");
+        replaceWalkingBtn = new JButton("Replace Walking");  
+        replaceSpecialBtn = new JButton("Replace Special");
+        replaceePainBtn = new JButton("Replace Pain");
+        
+        replaceIdleBtn.addActionListener(e -> replaceAnimationImages("idle"));
+        replaceWalkingBtn.addActionListener(e -> replaceAnimationImages("walking"));
+        replaceSpecialBtn.addActionListener(e -> replaceAnimationImages("special"));
+        replaceePainBtn.addActionListener(e -> replaceAnimationImages("pain"));
+        
+        panel.add(replaceIdleBtn);
+        panel.add(replaceWalkingBtn);
+        panel.add(replaceSpecialBtn);
+        panel.add(replaceePainBtn);
+        
+        return panel;
+    }
+    
+    private void loadCurrentData() {
+        nameField.setText(characterSet.getName());
+        authorField.setText(characterSet.getAuthorName());
+        descriptionField.setText(characterSet.getDescription());
+        typeCombo.setSelectedItem(originalType);
+    }
+    
+    private void saveChanges() {
+        characterSet.setName(nameField.getText().trim());
+        characterSet.setAuthorName(authorField.getText().trim());
+        characterSet.setDescription(descriptionField.getText().trim());
+    }
+    
+    private void flipAnimationImages(String animationType) {
+        AnimationSequence sequence = characterSet.getAnimationByName(animationType);
+        if (sequence == null || sequence.getFrameCount() == 0) {
+            JOptionPane.showMessageDialog(this, "No " + animationType + " images to flip.", 
+                                        "No Images", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        for (AnimationFrame frame : sequence.getFrames()) {
+            ImageIcon flipped = flipImageHorizontally(frame.getImage());
+            frame.setImage(flipped);
+        }
+        
+        JOptionPane.showMessageDialog(this, "Flipped " + sequence.getFrameCount() + " " + animationType + " images.", 
+                                    "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void replaceAnimationImages(String animationType) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+            "Image Files", "png", "jpg", "jpeg", "gif"));
+        
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File[] selectedFiles = fileChooser.getSelectedFiles();
+            
+            AnimationSequence sequence = characterSet.getAnimationByName(animationType);
+            if (sequence != null) {
+                // Clear existing frames
+                sequence.getFrames().clear();
+                
+                // Add new frames
+                for (File file : selectedFiles) {
+                    if (CharacterFileManager.isValidImageFile(file)) {
+                        ImageIcon image = CharacterFileManager.loadAndScaleImagePreserveAspect(file, 256);
+                        if (image != null) {
+                            AnimationFrame frame = new AnimationFrame(image, file.getAbsolutePath(), 150);
+                            sequence.addFrame(frame);
+                        }
+                    }
+                }
+                
+                JOptionPane.showMessageDialog(this, "Replaced " + animationType + " animation with " + 
+                                            sequence.getFrameCount() + " new images.", 
+                                            "Success", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    }
+    
+    private ImageIcon flipImageHorizontally(ImageIcon original) {
+        BufferedImage originalImage = new BufferedImage(
+            original.getIconWidth(), original.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = originalImage.createGraphics();
+        g2d.drawImage(original.getImage(), 0, 0, null);
+        g2d.dispose();
+        
+        BufferedImage flippedImage = new BufferedImage(
+            originalImage.getWidth(), originalImage.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2dFlipped = flippedImage.createGraphics();
+        g2dFlipped.drawImage(originalImage, originalImage.getWidth(), 0, -originalImage.getWidth(), 
+                           originalImage.getHeight(), null);
+        g2dFlipped.dispose();
+        
+        return new ImageIcon(flippedImage);
+    }
+    
+    public boolean isConfirmed() {
+        return confirmed;
+    }
+    
+    public String getSelectedType() {
+        return (String) typeCombo.getSelectedItem();
+    }
+}
+
+/**
+ * Panel for importing animation frames
+ */
+class AnimationImportPanel extends JPanel {
+    private String animationName;
+    private boolean isLooping;
+    private List<ImageIcon> images;
+    private JPanel imagePanel;
+    private JScrollPane scrollPane;
+    
+    public AnimationImportPanel(String animationName, boolean isLooping) {
+        this.animationName = animationName;
+        this.isLooping = isLooping;
+        this.images = new ArrayList<>();
+        
+        initializeUI();
+    }
+    
+    private void initializeUI() {
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createTitledBorder(animationName + (isLooping ? " (Loop)" : " (Once)")));
+        
+        // Create image panel
+        imagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        scrollPane = new JScrollPane(imagePanel);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        scrollPane.setPreferredSize(new Dimension(0, 100));
+        
+        add(scrollPane, BorderLayout.CENTER);
+        
+        // Add button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JButton addButton = new JButton("Add Images");
+        JButton clearButton = new JButton("Clear");
+        JButton flipButton = new JButton("Flip All");
+        
+        buttonPanel.add(addButton);
+        buttonPanel.add(clearButton);
+        buttonPanel.add(flipButton);
+        
+        add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Event handlers
+        addButton.addActionListener(e -> addImagesDialog());
+        clearButton.addActionListener(e -> clearImages());
+        flipButton.addActionListener(e -> flipAllImages());
+    }
+    
+    private void addImagesDialog() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+            "Image Files", "png", "jpg", "jpeg", "gif"));
+        
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File[] selectedFiles = fileChooser.getSelectedFiles();
+            
+            for (File file : selectedFiles) {
+                if (CharacterFileManager.isValidImageFile(file)) {
+                    ImageIcon image = CharacterFileManager.loadAndScaleImagePreserveAspect(file, 256);
+                    if (image != null) {
+                        addImage(image);
+                    }
+                }
+            }
+        }
+    }
+    
+    public void addImage(ImageIcon image) {
+        images.add(image);
+        
+        // Create thumbnail for display
+        JLabel thumbnail = new JLabel(image);
+        thumbnail.setBorder(BorderFactory.createRaisedBevelBorder());
+        thumbnail.setPreferredSize(new Dimension(80, 80));
+        
+        // Add remove functionality
+        thumbnail.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int index = getImageIndex(thumbnail);
+                    if (index >= 0) {
+                        removeImage(index);
+                    }
+                }
+            }
+        });
+        
+        imagePanel.add(thumbnail);
+        imagePanel.revalidate();
+        imagePanel.repaint();
+    }
+    
+    public void clearImages() {
+        images.clear();
+        imagePanel.removeAll();
+        imagePanel.revalidate();
+        imagePanel.repaint();
+    }
+    
+    public List<ImageIcon> getImages() {
+        return new ArrayList<>(images);
+    }
+    
+    public int getImageCount() {
+        return images.size();
+    }
+    
+    private int getImageIndex(JLabel thumbnail) {
+        Component[] components = imagePanel.getComponents();
+        for (int i = 0; i < components.length; i++) {
+            if (components[i] == thumbnail) {
+                return i;
+            }
+        }
+        return -1;
+    }
+    
+    private void removeImage(int index) {
+        if (index >= 0 && index < images.size()) {
+            images.remove(index);
+            imagePanel.remove(index);
+            imagePanel.revalidate();
+            imagePanel.repaint();
+        }
+    }
+    
+    /**
+     * Flip all images horizontally for correct face direction
+     */
+    private void flipAllImages() {
+        if (images.isEmpty()) return;
+        
+        try {
+            // Create new flipped images
+            List<ImageIcon> flippedImages = new ArrayList<>();
+            
+            for (ImageIcon original : images) {
+                ImageIcon flipped = flipImageHorizontally(original);
+                if (flipped != null) {
+                    flippedImages.add(flipped);
+                }
+            }
+            
+            // Replace original images with flipped ones
+            images.clear();
+            images.addAll(flippedImages);
+            
+            // Update UI
+            imagePanel.removeAll();
+            for (ImageIcon flippedImage : flippedImages) {
+                JLabel thumbnail = new JLabel(flippedImage);
+                thumbnail.setBorder(BorderFactory.createRaisedBevelBorder());
+                thumbnail.setPreferredSize(new Dimension(80, 80));
+                
+                // Add remove functionality
+                thumbnail.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        if (e.getClickCount() == 2) {
+                            int index = getImageIndex(thumbnail);
+                            if (index >= 0) {
+                                removeImage(index);
+                            }
+                        }
+                    }
+                });
+                
+                imagePanel.add(thumbnail);
+            }
+            
+            imagePanel.revalidate();
+            imagePanel.repaint();
+            
+            System.out.println("Flipped " + flippedImages.size() + " images in " + animationName);
+            
+        } catch (Exception e) {
+            System.out.println("Error flipping images: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Flip an image horizontally
+     */
+    private ImageIcon flipImageHorizontally(ImageIcon original) {
+        if (original == null) return null;
+        
+        try {
+            Image img = original.getImage();
+            int width = img.getWidth(null);
+            int height = img.getHeight(null);
+            
+            BufferedImage flipped = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2d = flipped.createGraphics();
+            
+            // Apply horizontal flip transformation
+            g2d.drawImage(img, width, 0, -width, height, null);
+            g2d.dispose();
+            
+            return new ImageIcon(flipped);
+            
+        } catch (Exception e) {
+            System.out.println("Error flipping image: " + e.getMessage());
+            return original;
+        }
     }
 }
 
 // Enemy class that follows the pet
 class EnemyWindow extends JWindow {
+    // Constants
+    private static final int DEFAULT_WIDTH = 128;
+    private static final int DEFAULT_HEIGHT = 128;
+    
     private JLabel enemyLabel;
     private Timer followTimer;
     private Timer horrorEffectTimer;
     private Timer animationTimer;
     private AdvancedDesktopPet targetPet;
+    
+    private ImageIcon idleGif;
+    private ImageIcon walkGif;
+    private List<ImageIcon> specialAnimations;
+    
+    // Mouse interaction
+    private Point mouseOffset;
+    private boolean isDragging = false;
+    
+    // Movement
+    private int targetX, targetY;
     private Random random = new Random();
-    private boolean isVisible = true;
-    private int enemyWidth;
-    private int enemyHeight;
+    private boolean isWalking = false;
+    private boolean facingRight = true; // Track facing direction
+    private int walkAnimationFrame = 0; // For leg animation sync
+    
+    // Behaviors
+    private int currentBehavior = 1; // 0=idle, 1=walking, 2=special - Start in active mode
+    
+    // Safety timer to check if pet is lost
+    private Timer safetyTimer;
+    
+    // Enemy system
+    private boolean enemyEnabled = false;
+    private List<EnemyWindow> enemies = new ArrayList<>();
+    private Timer enemySpawnTimer;
+    private Timer enemyCleanupTimer;
+    private List<ImageIcon> enemyImages = new ArrayList<>();
+    private Random enemyRandom = new Random();
+    private int maxEnemies = 5; // Increased from 3 to 5
+    
+    // Tray
+    private SystemTray systemTray;
+    private TrayIcon trayIcon;
+    
+    // Settings
+    int petWidth = DEFAULT_WIDTH;
+    int petHeight = DEFAULT_HEIGHT;
+    float transparency = 1.0f; // 0.0 = invisible, 1.0 = opaque
+    private static List<AdvancedDesktopPet> allPets = new ArrayList<>();
+    private JFrame settingsWindow = null;
+    private boolean allowCrossScreen = false; // Allow movement between screens
+    private JWindow floatingShortcut = null; // Cyberpunk floating shortcut
+    
+    // Language support
+    private boolean isChinese = false; // false = English, true = Chinese
+    private Map<String, String> englishTexts = new HashMap<>();
+    private Map<String, String> chineseTexts = new HashMap<>();
+    
+    // Music system - now managed by MusicManager
+    private static boolean musicEnabled = true;
+    
+    // Loading screen
+    private JWindow loadingWindow;
+    private JLabel loadingLabel;
+    private JProgressBar loadingProgress;
+    private boolean isLoading = true;
+    
+    // Component references for easy updating
+    private JLabel petCountLabel;
+    private JLabel enemyInfoLabel;
+    private JLabel maxEnemiesLabel;
+    private JButton englishBtn;
+    private JButton chineseBtn;
+    private JButton duplicateBtn;
+    private JButton removeBtn;
+    private JButton hideBtn;
+    private JButton showBtn;
+    private JButton zoomInBtn;
+    private JButton zoomOutBtn;
+    private JButton testCrossScreenBtn;
+    private JButton spawnEnemyBtn;
+    private JButton clearEnemiesBtn;
+    private JButton forceCleanupBtn;
+    private JButton closeBtn;
+    private JButton exitBtn;
+    private JCheckBox crossScreenBox;
+    private JCheckBox musicBox;
+    private JCheckBox enemyBox;
+    
+    // Section header references for language updates
+    private JLabel languageSectionLabel;
+    private JLabel petManagementSectionLabel;
+    private JLabel transparencySectionLabel;
+    private JLabel sizeSectionLabel;
+    private JLabel movementSectionLabel;
+    private JLabel horrorSectionLabel;
+    
+    // Enemy-specific variables
+    private int enemyWidth = DEFAULT_WIDTH;
+    private int enemyHeight = DEFAULT_HEIGHT;
     private float enemyTransparency = 1.0f;
+    private boolean enemyFacingRight = true;
     private ImageIcon currentEnemyImage;
-    private List<ImageIcon> enemyImages;
-    private int flickerCount = 0;
     private int currentAnimationFrame = 0;
-    private boolean enemyFacingRight = true; // Track enemy facing direction
-    private Point lastLocation = null; // Track last position for direction calculation
+    private Point lastLocation;
+    private int flickerCount = 0;
     
     public EnemyWindow(AdvancedDesktopPet pet, List<ImageIcon> images) {
         this.targetPet = pet;
@@ -3379,6 +6849,9 @@ class EnemyWindow extends JWindow {
         enemyLabel = new JLabel();
         enemyLabel.setHorizontalAlignment(JLabel.CENTER);
         enemyLabel.setVerticalAlignment(JLabel.CENTER);
+        // Set label bounds to exactly match the enemy window size
+        enemyLabel.setBounds(0, 0, enemyWidth, enemyHeight);
+        enemyLabel.setPreferredSize(new Dimension(enemyWidth, enemyHeight));
         add(enemyLabel);
         
         // Load random enemy image and scale it to match enemy size
@@ -3543,7 +7016,7 @@ class EnemyWindow extends JWindow {
                 // Update enemy direction based on position relative to pet
                 // If enemy is to the left of pet (dx > 0), enemy should face right
                 // If enemy is to the right of pet (dx < 0), enemy should face left
-                updateEnemyDirection(dx > 0 ? -1 : 1);
+                updateEnemyDirection(dx); // Pass the actual dx value, not inverted
                 
                 // Validate new location before setting it
                 Point newLocation = new Point(currentLocation.x + dx, currentLocation.y + dy);
@@ -3566,7 +7039,7 @@ class EnemyWindow extends JWindow {
                     if (isValidLocation(newLocation)) {
                         setLocation(newLocation);
                         // Update direction for escape movement
-                        updateEnemyDirection(escapeX > 0 ? 1 : -1);
+                        updateEnemyDirection(escapeX); // Pass actual escape direction
                     }
                 }
             }
@@ -3898,15 +7371,21 @@ class EnemyWindow extends JWindow {
     // Update enemy size and transparency from pet settings
     public void updateFromPetSettings() {
         if (targetPet != null) {
-            // Update size
-            enemyWidth = targetPet.petWidth;
-            enemyHeight = targetPet.petHeight;
+            // Update size using independent enemy sizing from the pet
+            enemyWidth = targetPet.enemyWidth;
+            enemyHeight = targetPet.enemyHeight;
             setSize(enemyWidth, enemyHeight);
             
-            System.out.println("Enemy size updated to: " + enemyWidth + "x" + enemyHeight + 
+            // Update label bounds to match new window size
+            if (enemyLabel != null) {
+                enemyLabel.setBounds(0, 0, enemyWidth, enemyHeight);
+                enemyLabel.setPreferredSize(new Dimension(enemyWidth, enemyHeight));
+            }
+            
+            System.out.println("Enemy size updated to independent: " + enemyWidth + "x" + enemyHeight + 
                              " (Pet size: " + targetPet.petWidth + "x" + targetPet.petHeight + ")");
             
-            // Scale the current enemy image to match the new size
+            // Scale the current enemy image to match the new independent size
             if (currentEnemyImage != null && currentEnemyImage.getImage() != null) {
                 try {
                     Image scaledImage = currentEnemyImage.getImage().getScaledInstance(
@@ -3921,6 +7400,10 @@ class EnemyWindow extends JWindow {
             // Update transparency
             enemyTransparency = targetPet.transparency;
             updateEnemyTransparency();
+            
+            // Force repaint to ensure proper display at new size
+            revalidate();
+            repaint();
         }
     }
     
@@ -3949,23 +7432,45 @@ class EnemyWindow extends JWindow {
     
     // Update enemy direction based on movement
     private void updateEnemyDirection(int dx) {
-        if (dx > 0 && !enemyFacingRight) {
-            // Moving right, should face right
+        boolean shouldFaceRight = dx > 0; // Face right if moving right (dx > 0)
+        
+        if (shouldFaceRight && !enemyFacingRight) {
+            // Should face right but currently facing left
             enemyFacingRight = true;
             updateEnemySprite();
-            System.out.println("Enemy now facing RIGHT (dx: " + dx + ")");
-        } else if (dx < 0 && enemyFacingRight) {
-            // Moving left, should face left
+            System.out.println("Enemy changed to face RIGHT (dx: " + dx + ")");
+        } else if (!shouldFaceRight && enemyFacingRight) {
+            // Should face left but currently facing right
             enemyFacingRight = false;
             updateEnemySprite();
-            System.out.println("Enemy now facing LEFT (dx: " + dx + ")");
+            System.out.println("Enemy changed to face LEFT (dx: " + dx + ")");
         }
+        // Add debug info even when no change is needed
+        System.out.println("Enemy direction check - dx: " + dx + ", should face: " + (shouldFaceRight ? "RIGHT" : "LEFT") + ", currently facing: " + (enemyFacingRight ? "RIGHT" : "LEFT"));
     }
     
     // Update enemy sprite with correct direction
     private void updateEnemySprite() {
         if (currentEnemyImage != null) {
             enemyLabel.setIcon(getFlippedEnemyIcon(currentEnemyImage));
+        }
+    }
+    
+    /**
+     * Update enemy with new image list (for character set switching)
+     */
+    public void updateEnemyImages(List<ImageIcon> newImages) {
+        if (newImages != null && !newImages.isEmpty()) {
+            // Update the image list
+            this.enemyImages = new ArrayList<>(newImages);
+            
+            // Update current image to first one from new set
+            this.currentEnemyImage = newImages.get(0);
+            
+            // Update the display
+            updateEnemySprite();
+            
+            System.out.println("Updated enemy with new character set images (" + newImages.size() + " images)");
         }
     }
 } 
