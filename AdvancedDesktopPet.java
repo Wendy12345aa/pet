@@ -8023,6 +8023,78 @@ class EnemyWindow extends JWindow {
     private void startEnemyPainVisualEffect() {
         System.out.println("ENEMY: Starting visual pain effect - ID: " + EnemyWindow.this.hashCode());
         
+        // Try to use character set pain animation first
+        CharacterSetManager csm = CharacterSetManager.getInstance();
+        CharacterSet currentEnemySet = csm.getCurrentEnemyCharacterSet();
+        
+        if (currentEnemySet != null && currentEnemySet.getPainAnimation() != null && 
+            currentEnemySet.getPainAnimation().getFrameCount() > 0) {
+            
+            // Use character set pain animation
+            System.out.println("ENEMY: Using character set pain animation - ID: " + EnemyWindow.this.hashCode());
+            startCharacterSetPainAnimation(currentEnemySet.getPainAnimation());
+        } else {
+            // Fall back to simple red background effect
+            System.out.println("ENEMY: Using fallback red background effect - ID: " + EnemyWindow.this.hashCode());
+            startFallbackPainEffect();
+        }
+    }
+    
+    /**
+     * Start character set pain animation for enemy
+     */
+    private void startCharacterSetPainAnimation(AnimationSequence painAnimation) {
+        // Store original image to restore later
+        ImageIcon originalImage = currentEnemyImage;
+        
+        // Create pain animation timer
+        Timer painAnimationTimer = new Timer(150, new ActionListener() {
+            private int frameIndex = 0;
+            private int cycleCount = 0;
+            
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (!isEnemyPainActive) {
+                    // Pain ended, restore original image
+                    currentEnemyImage = originalImage;
+                    updateEnemySprite();
+                    ((Timer) e.getSource()).stop();
+                    return;
+                }
+                
+                // Get current pain frame
+                List<AnimationFrame> frames = painAnimation.getFrames();
+                if (frameIndex < frames.size()) {
+                    AnimationFrame currentFrame = frames.get(frameIndex);
+                    if (currentFrame != null) {
+                        currentEnemyImage = currentFrame.getImage();
+                        updateEnemySprite();
+                    }
+                }
+                
+                frameIndex++;
+                
+                // Loop through pain animation frames
+                if (frameIndex >= painAnimation.getFrameCount()) {
+                    frameIndex = 0;
+                    cycleCount++;
+                    
+                    // Stop after 3 cycles (like the original pain system)
+                    if (cycleCount >= ENEMY_MAX_PAIN_CYCLES) {
+                        currentEnemyImage = originalImage;
+                        updateEnemySprite();
+                        ((Timer) e.getSource()).stop();
+                    }
+                }
+            }
+        });
+        painAnimationTimer.start();
+    }
+    
+    /**
+     * Start fallback pain effect (red background + flickering)
+     */
+    private void startFallbackPainEffect() {
         // Immediate visual feedback - make enemy flash red or change color
         enemyLabel.setBackground(Color.RED);
         enemyLabel.setOpaque(true);
