@@ -49,6 +49,10 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     private CharacterSetManager characterSetManager;
     private Timer multiFrameAnimationTimer;
     private boolean isPainAnimationActive = false;
+    private int painCycleCount = 0; // Track pain animation cycles
+    private int maxPainCycles = 3; // Maximum pain cycles before running away
+    private boolean isPowerModeActive = false; // Power mode - immune to pain
+    private Timer powerModeTimer; // Timer for power mode duration
     
     // Safety timer to check if pet is lost
     private Timer safetyTimer;
@@ -602,7 +606,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         // Load from character set or fallback to legacy loading
         if (loadFromCharacterSet()) {
-            System.out.println("Loaded animations from character set");
+            // Loaded animations from character set
         } else {
             System.out.println("Loading legacy animations");
             loadLegacyAnimations();
@@ -774,6 +778,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
      */
     private void initializeMultiFrameAnimationTimer() {
         multiFrameAnimationTimer = new Timer(150, e -> updateMultiFrameAnimation());
+        multiFrameAnimationTimer.setRepeats(true); // Ensure it repeats
         // Don't start automatically - will be started when needed
     }
     
@@ -787,23 +792,27 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             
             AnimationSequence currentSequence = null;
             
-            // Determine which animation sequence to use
+            // Determine which animation sequence to use based on current state
             if (isPainAnimationActive) {
                 currentSequence = currentSet.getPainAnimation();
                 // If pain animation is missing, fall back to idle
                 if (currentSequence.getFrameCount() == 0) {
                     currentSequence = currentSet.getIdleAnimation();
                 }
-            } else if (currentBehavior == 0) { // idle
-                currentSequence = currentSet.getIdleAnimation();
-            } else if (currentBehavior == 1) { // walking
+            } else if (isWalking) { // walking - check isWalking state first
                 currentSequence = currentSet.getWalkingAnimation();
+                // If walking animation is missing, fall back to idle
+                if (currentSequence.getFrameCount() == 0) {
+                    currentSequence = currentSet.getIdleAnimation();
+                }
             } else if (currentBehavior == 2) { // special
                 currentSequence = currentSet.getSpecialAnimation();
                 // If special animation is missing, fall back to idle
                 if (currentSequence.getFrameCount() == 0) {
                     currentSequence = currentSet.getIdleAnimation();
                 }
+            } else { // idle (default)
+                currentSequence = currentSet.getIdleAnimation();
             }
             
             if (currentSequence != null && currentSequence.getFrameCount() > 0) {
@@ -816,7 +825,29 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                         petLabel.setIcon(displayImage);
                         
                         // Update timer delay based on frame duration
-                        multiFrameAnimationTimer.setDelay(nextFrame.getDuration());
+                        int frameDuration = nextFrame.getDuration();
+                        if (frameDuration > 0) {
+                            multiFrameAnimationTimer.setDelay(frameDuration);
+                        }
+                        
+                        // Debug output for pain animation
+                        if (isPainAnimationActive) {
+                            System.out.println("Pain animation frame: " + currentSequence.getCurrentFrameIndex() + 
+                                             "/" + currentSequence.getFrameCount() + 
+                                             " (duration: " + frameDuration + "ms)");
+                            
+                            // Check if we completed a cycle (reached the end of animation)
+                            if (currentSequence.getCurrentFrameIndex() == 0) {
+                                painCycleCount++;
+                                System.out.println("Pain cycle completed: " + painCycleCount + "/" + maxPainCycles);
+                                
+                                // Stop pain after 3 cycles and run away
+                                if (painCycleCount >= maxPainCycles) {
+                                    System.out.println("Pain cycles completed, stopping pain and running away");
+                                    stopPainAnimation();
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -829,11 +860,37 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     /**
      * Start pain animation
      */
+    /**
+     * Check if pet is currently vulnerable to pain
+     */
+    public boolean isVulnerableToPain() {
+        return !isPainAnimationActive && !isPowerModeActive;
+    }
+    
     public void startPainAnimation() {
         if (isPainAnimationActive) return; // Already in pain animation
+        if (isPowerModeActive) {
+            System.out.println("Pet is in power mode - immune to pain!");
+            return; // Cannot start pain during power mode
+        }
         
         isPainAnimationActive = true;
-        System.out.println("Starting pain animation");
+        painCycleCount = 0; // Reset cycle counter
+        System.out.println("Starting pain animation (will run for " + maxPainCycles + " cycles)");
+        
+        // Stop any current movement and prevent new movement during pain
+        isWalking = false;
+        
+        // Stop ALL movement-related timers during pain
+        if (movementTimer != null && movementTimer.isRunning()) {
+            movementTimer.stop();
+            System.out.println("Stopped movement timer during pain");
+        }
+        
+        if (behaviorTimer != null && behaviorTimer.isRunning()) {
+            behaviorTimer.stop();
+            System.out.println("Stopped behavior timer during pain");
+        }
         
         // Stop current animation timers
         if (animationTimer != null && animationTimer.isRunning()) {
@@ -847,6 +904,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 if (currentSet.getPainAnimation().getFrameCount() > 0) {
                     currentSet.getPainAnimation().reset(); // Reset to first frame
                     multiFrameAnimationTimer.start();
+                    System.out.println("Started pain animation with " + currentSet.getPainAnimation().getFrameCount() + " frames");
                 } else {
                     // No pain animation available, just use idle animation during pain
                     System.out.println("No pain animation available, using idle animation");
@@ -854,12 +912,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                     multiFrameAnimationTimer.start();
                 }
                 
-                // Auto-stop pain animation after duration
-                Timer painDurationTimer = new Timer(2000, e -> {
-                    stopPainAnimation();
-                    ((Timer) e.getSource()).stop();
-                });
-                painDurationTimer.start();
+                // No fixed timer - pain will stop after 3 cycles
             }
         }
     }
@@ -883,8 +936,210 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             animationTimer.start();
         }
         
+        // Restart movement and behavior timers
+        if (movementTimer != null && !movementTimer.isRunning()) {
+            movementTimer.start();
+            System.out.println("Restarted movement timer after pain");
+        }
+        
+        if (behaviorTimer != null && !behaviorTimer.isRunning()) {
+            behaviorTimer.start();
+            System.out.println("Restarted behavior timer after pain");
+        }
+        
+        // Start power mode after pain ends
+        startPowerMode();
+        
+        // Trigger a faster escape behavior after pain
+        if (currentBehavior == 1) { // If in walking behavior
+            // Start a faster escape walk immediately
+            Timer postPainEscapeTimer = new Timer(100, e -> {
+                if (!isDragging && !isPainAnimationActive) {
+                    System.out.println("Starting post-pain escape run");
+                    startEscapeRun();
+                }
+                ((Timer) e.getSource()).stop();
+            });
+            postPainEscapeTimer.start();
+        }
+        
         // Update to current behavior sprite
         updateCurrentBehaviorSprite();
+    }
+    
+    /**
+     * Start escape run - faster movement away from enemies
+     */
+    private void startEscapeRun() {
+        if (isDragging || isPainAnimationActive) return; // Can still escape during power mode
+        
+        System.out.println("Starting escape run - faster movement");
+        
+        // Find the nearest enemy to run away from
+        Point enemyLocation = findNearestEnemyLocation();
+        if (enemyLocation != null) {
+            // Calculate direction away from enemy
+            Point current = getLocation();
+            int dx = current.x - enemyLocation.x;
+            int dy = current.y - enemyLocation.y;
+            
+            // Normalize direction and set target far away from enemy
+            double distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > 0) {
+                dx = (int) ((dx / distance) * 300); // Run 300 pixels away
+                dy = (int) ((dy / distance) * 300);
+            } else {
+                // If enemy is at same position, run in random direction
+                dx = random.nextInt(200) - 100;
+                dy = random.nextInt(200) - 100;
+            }
+            
+            targetX = current.x + dx;
+            targetY = current.y + dy;
+        } else {
+            // No enemy found, run to random location
+            Rectangle screenBounds = getUsableScreenBounds();
+            int padding = 50;
+            int minX = screenBounds.x + padding;
+            int maxX = screenBounds.x + screenBounds.width - petWidth - padding;
+            int minY = screenBounds.y + padding;
+            int maxY = screenBounds.y + screenBounds.height - petHeight - padding;
+            
+            if (maxX <= minX) maxX = minX + petWidth;
+            if (maxY <= minY) maxY = minY + petHeight;
+            
+            targetX = minX + random.nextInt(maxX - minX);
+            targetY = minY + random.nextInt(maxY - minY);
+        }
+        
+        isWalking = true;
+        walkAnimationFrame = 0;
+        
+        System.out.println("Escape target set to: (" + targetX + ", " + targetY + ")");
+        
+        // Determine direction and flip image if needed
+        Point current = getLocation();
+        boolean shouldFaceRight = targetX > current.x;
+        
+        if (shouldFaceRight != facingRight) {
+            facingRight = shouldFaceRight;
+        }
+        
+        // Ensure walking animation is properly started
+        updateWalkingSprite();
+        
+        // Faster escape timer (30ms instead of 50ms for faster movement)
+        Timer escapeTimer = new Timer(30, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Stop movement immediately if pain animation is active (but allow during power mode)
+                if (isPainAnimationActive) {
+                    System.out.println("Stopping escape during pain animation");
+                    isWalking = false;
+                    updateIdleSprite();
+                    ((Timer) e.getSource()).stop();
+                    return;
+                }
+                
+                Point current = getLocation();
+                int dx = targetX - current.x;
+                int dy = targetY - current.y;
+                
+                if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
+                    System.out.println("Pet reached escape target, stopping escape");
+                    isWalking = false;
+                    updateIdleSprite();
+                    ((Timer) e.getSource()).stop();
+                    
+                    // Return to normal behavior after escape
+                    Timer returnToNormalTimer = new Timer(1000, evt -> {
+                        if (!isDragging && !isPainAnimationActive) {
+                            System.out.println("Returning to normal behavior after escape");
+                            startRandomWalk();
+                        }
+                        ((Timer) evt.getSource()).stop();
+                    });
+                    returnToNormalTimer.start();
+                    return;
+                }
+                
+                // Faster movement (5 pixels instead of 3)
+                int stepX = dx == 0 ? 0 : (dx > 0 ? 5 : -5);
+                int stepY = dy == 0 ? 0 : (dy > 0 ? 5 : -5);
+                
+                Point newLocation = new Point(current.x + stepX, current.y + stepY);
+                Point safeNewLocation = ensurePetFullyVisible(newLocation);
+                
+                // Don't move if pain animation is active
+                if (!isPainAnimationActive) {
+                    setLocation(safeNewLocation);
+                }
+                
+                // Update walking animation frame for leg sync
+                walkAnimationFrame = (walkAnimationFrame + 1) % 8;
+                
+                // Ensure walking animation is active during movement
+                if (isWalking) {
+                    updateWalkingSprite();
+                }
+            }
+        });
+        escapeTimer.start();
+    }
+    
+    /**
+     * Start power mode - pet becomes immune to pain for 3 seconds
+     */
+    private void startPowerMode() {
+        if (isPowerModeActive) return; // Already in power mode
+        
+        isPowerModeActive = true;
+        System.out.println("POWER MODE ACTIVATED! Pet is immune to pain for 3 seconds!");
+        
+        // Create power mode timer for 3 seconds
+        powerModeTimer = new Timer(3000, e -> {
+            stopPowerMode();
+            ((Timer) e.getSource()).stop();
+        });
+        powerModeTimer.start();
+    }
+    
+    /**
+     * Stop power mode - pet can be hurt again
+     */
+    private void stopPowerMode() {
+        if (!isPowerModeActive) return;
+        
+        isPowerModeActive = false;
+        System.out.println("Power mode ended - pet can be hurt again");
+        
+        if (powerModeTimer != null) {
+            powerModeTimer.stop();
+        }
+    }
+    
+    /**
+     * Find the location of the nearest enemy
+     */
+    private Point findNearestEnemyLocation() {
+        Point current = getLocation();
+        Point nearestEnemy = null;
+        double nearestDistance = Double.MAX_VALUE;
+        
+        for (EnemyWindow enemy : enemies) {
+            if (enemy != null && enemy.isVisible()) {
+                Point enemyLocation = enemy.getLocation();
+                if (enemyLocation != null) {
+                    double distance = current.distance(enemyLocation);
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestEnemy = enemyLocation;
+                    }
+                }
+            }
+        }
+        
+        return nearestEnemy;
     }
     
     /**
@@ -1012,12 +1267,12 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
      * Load enemy images from current character set
      */
     private void loadEnemyImagesFromCharacterSet() {
-        System.out.println("Loading enemy images from character set...");
+        // Loading enemy images from character set...
         System.out.println("Current pet size: " + petWidth + "x" + petHeight);
         enemyImages.clear();
         
         CharacterSet currentEnemySet = characterSetManager.getCurrentEnemyCharacterSet();
-        System.out.println("Current enemy character set: " + (currentEnemySet != null ? currentEnemySet.getName() : "null"));
+        // Current enemy character set: " + (currentEnemySet != null ? currentEnemySet.getName() : "null")
         
         if (currentEnemySet != null && !currentEnemySet.getName().equals("default")) {
             // Load from character set animations
@@ -1078,7 +1333,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             System.out.println("No character set enemy images found, falling back to default loading");
             loadEnemyImages();
         } else {
-            System.out.println("Loaded " + enemyImages.size() + " enemy images from character set: " + currentEnemySet.getName() + " at independent size " + enemyWidth + "x" + enemyHeight);
+            // Loaded " + enemyImages.size() + " enemy images from character set: " + currentEnemySet.getName() + " at independent size " + enemyWidth + "x" + enemyHeight
         }
     }
     
@@ -1090,7 +1345,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             return;
         }
         
-        System.out.println("Updating " + enemies.size() + " existing enemies with new character set images");
+        // Updating " + enemies.size() + " existing enemies with new character set images
         
         // Update each enemy with new images
         for (EnemyWindow enemy : enemies) {
@@ -1424,7 +1679,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         // Add a movement watchdog timer to ensure pet keeps moving
         Timer movementWatchdog = new Timer(10000, e -> {
             if (!isDragging && !isWalking && currentBehavior == 1) {
-                System.out.println("Movement watchdog: Pet hasn't moved for 10 seconds - forcing movement");
+                // Movement watchdog: Pet hasn't moved for 10 seconds - forcing movement
                 startRandomWalk();
             }
         });
@@ -2163,16 +2418,14 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 // If stuck for more than 2 safety checks (10 seconds), help it
                 if (stuckCounter >= 2) {
-                    System.out.println("Pet appears to be idle for too long! Encouraging movement...");
+                    // Pet appears to be idle for too long! Encouraging movement...
                     
                     // Force movement based on current behavior
                     if (currentBehavior == 1) {
-                        // Pet should be walking - restart movement
-                        System.out.println("Pet should be walking but appears stuck - restarting movement");
+                                    // Pet should be walking - restart movement
                         startRandomWalk();
                     } else if (currentBehavior == 0) {
-                        // Pet is idle - change to walking mode
-                        System.out.println("Pet is idle - changing to walking mode");
+                                    // Pet is idle - change to walking mode
                         currentBehavior = 1;
                         startRandomWalk();
                     }
@@ -2288,9 +2541,9 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private void startRandomWalk() {
-        if (isDragging) return;
+        if (isDragging || isPainAnimationActive) return; // Don't start walking during pain
         
-        System.out.println("Starting random walk for pet...");
+        // Starting random walk for pet...
         
         if (allowCrossScreen) {
             // Select a random valid screen first, then pick target on that screen
@@ -2325,26 +2578,35 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             facingRight = shouldFaceRight;
         }
         
-        // Set walking animation with direction
+        // Ensure walking animation is properly started
         updateWalkingSprite();
         
         Timer walkTimer = new Timer(50, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                // Stop movement immediately if pain animation is active
+                if (isPainAnimationActive) {
+                    System.out.println("Stopping movement during pain animation");
+                    isWalking = false;
+                    updateIdleSprite();
+                    ((Timer) e.getSource()).stop();
+                    return;
+                }
+                
                 Point current = getLocation();
                 int dx = targetX - current.x;
                 int dy = targetY - current.y;
                 
                 if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
-                    System.out.println("Pet reached target, stopping movement");
+                    // Pet reached target, stopping movement
                     isWalking = false;
                     updateIdleSprite();
                     ((Timer) e.getSource()).stop();
                     
                     // Schedule next movement automatically if in walking behavior - shorter delay
-                    if (currentBehavior == 1 && !isDragging) {
+                    if (currentBehavior == 1 && !isDragging && !isPainAnimationActive) {
                         Timer nextMovementTimer = new Timer(1000 + random.nextInt(2000), evt -> {
-                            if (!isDragging && currentBehavior == 1) {
+                            if (!isDragging && currentBehavior == 1 && !isPainAnimationActive) {
                                 System.out.println("Auto-starting next movement after reaching target");
                                 startRandomWalk();
                             }
@@ -2364,14 +2626,14 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 // Check if we're stuck (not making progress towards target)
                 if (safeNewLocation.equals(current)) {
                     // We're stuck, pick a new target
-                    System.out.println("Pet is stuck trying to reach target, picking new target...");
+                    // Pet is stuck trying to reach target, picking new target...
                     ((Timer) e.getSource()).stop();
                     isWalking = false;
                     updateIdleSprite();
                     
                     // Start a new walk after a short delay
                     Timer retryTimer = new Timer(1000, evt -> {
-                        if (!isDragging) {
+                        if (!isDragging && !isPainAnimationActive) {
                             startRandomWalk();
                         }
                         ((Timer) evt.getSource()).stop();
@@ -2380,22 +2642,30 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                     return;
                 }
                 
-                setLocation(safeNewLocation);
+                // Don't move if pain animation is active
+                if (!isPainAnimationActive) {
+                    setLocation(safeNewLocation);
+                }
                 
                 // Update walking animation frame for leg sync (for legacy animations only)
                 walkAnimationFrame = (walkAnimationFrame + 1) % 8;
+                
+                // Ensure walking animation is active during movement
+                if (isWalking) {
+                    updateWalkingSprite();
+                }
                 
                 // Only update walking sprite for legacy animations (character sets handle their own timing)
                 CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
                 if (currentSet == null || currentSet.getWalkingAnimation().getFrameCount() == 0) {
                     // Legacy animation - update sprite every 4 frames for leg movement
-                if (walkAnimationFrame % 4 == 0) {
+                    if (walkAnimationFrame % 4 == 0) {
                         updateWalkingSprite();
                     }
                 } else {
                     // Character set animations are handled by the multi-frame animation timer
                     if (walkAnimationFrame % 20 == 0) { // Debug every 20 frames to avoid spam
-                        System.out.println("Using character set animation for movement (frame " + walkAnimationFrame + ")");
+                        // Using character set animation for movement (frame " + walkAnimationFrame + ")
                     }
                 }
             }
@@ -2574,22 +2844,27 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
         if (currentSet != null && currentSet.getWalkingAnimation().getFrameCount() > 0) {
             // Use character set multi-frame animation
-            if (!multiFrameAnimationTimer.isRunning() && isWalking) {
-                currentSet.getWalkingAnimation().reset();
-                multiFrameAnimationTimer.start();
-                System.out.println("Started multi-frame walking animation for character set: " + currentSet.getName());
-            } else if (multiFrameAnimationTimer.isRunning() && !isWalking) {
-                // Stop animation if we're not walking anymore
-                multiFrameAnimationTimer.stop();
-                System.out.println("Stopped multi-frame walking animation (not walking anymore)");
+            if (isWalking) {
+                // Pet is walking - ensure walking animation is active
+                if (!multiFrameAnimationTimer.isRunning()) {
+                    currentSet.getWalkingAnimation().reset();
+                    multiFrameAnimationTimer.start();
+                    // Started multi-frame walking animation for character set: " + currentSet.getName()
+                }
+                // If timer is already running and we're walking, it will continue with walking frames
+            } else {
+                // Pet is not walking - stop walking animation if it's running
+                if (multiFrameAnimationTimer.isRunning()) {
+                    multiFrameAnimationTimer.stop();
+                    System.out.println("Stopped multi-frame walking animation (not walking anymore)");
+                }
             }
-            // If timer is already running and we're walking, don't restart it
         } else {
             // Fall back to legacy animation system
             System.out.println("Using legacy animation for walking (currentSet: " + 
                              (currentSet != null ? currentSet.getName() + " with " + currentSet.getWalkingAnimation().getFrameCount() + " frames" : "null") + ")");
-        ImageIcon sprite = (walkAnimationFrame % 8 < 4) ? walkGif : idleGif; // Alternate between walk and idle for leg movement
-        petLabel.setIcon(getFlippedIcon(sprite));
+            ImageIcon sprite = (walkAnimationFrame % 8 < 4) ? walkGif : idleGif; // Alternate between walk and idle for leg movement
+            petLabel.setIcon(getFlippedIcon(sprite));
         }
     }
     
@@ -2662,7 +2937,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             
         } else if (currentSet != null) {
             // Character set exists but has no special animation - just briefly change to idle and back
-            System.out.println("Character set has no special animation, skipping...");
+            // Character set has no special animation, skipping...
             return; // Skip special animation entirely
         } else {
             // Fall back to legacy special animation
@@ -2791,28 +3066,28 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         if (petRight > screenBounds.x + screenBounds.width) {
             newX = screenBounds.x + screenBounds.width - petWidth;
             needsRepositioning = true;
-            System.out.println("Pet was cut off on right edge. Pet right: " + petRight + ", Screen right: " + (screenBounds.x + screenBounds.width));
+                            // Pet was cut off on right edge. Pet right: " + petRight + ", Screen right: " + (screenBounds.x + screenBounds.width)
         }
         
         // Check bottom edge (pet extends beyond bottom edge)
         if (petBottom > screenBounds.y + screenBounds.height) {
             newY = screenBounds.y + screenBounds.height - petHeight;
             needsRepositioning = true;
-            System.out.println("Pet was cut off on bottom edge. Pet bottom: " + petBottom + ", Screen bottom: " + (screenBounds.y + screenBounds.height));
+                            // Pet was cut off on bottom edge. Pet bottom: " + petBottom + ", Screen bottom: " + (screenBounds.y + screenBounds.height)
         }
         
         // Check left edge (pet extends beyond left edge)
         if (newX < screenBounds.x) {
             newX = screenBounds.x;
             needsRepositioning = true;
-            System.out.println("Pet was cut off on left edge. Pet left: " + currentLocation.x + ", Screen left: " + screenBounds.x);
+                            // Pet was cut off on left edge. Pet left: " + currentLocation.x + ", Screen left: " + screenBounds.x
         }
         
         // Check top edge (pet extends beyond top edge)
         if (newY < screenBounds.y) {
             newY = screenBounds.y;
             needsRepositioning = true;
-            System.out.println("Pet was cut off on top edge. Pet top: " + currentLocation.y + ", Screen top: " + screenBounds.y);
+                            // Pet was cut off on top edge. Pet top: " + currentLocation.y + ", Screen top: " + screenBounds.y
         }
         
         // Additional safety check: ensure the new position is actually valid
@@ -2849,7 +3124,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             // Check if pet is fully within this screen
             if (currentLocation.x >= screenBounds.x && 
                 currentLocation.y >= screenBounds.y &&
-                currentLocation.x + petWidth <= screenBounds.x + screenBounds.width &&
+                currentLocation.x + petWidth <= screenBounds.x + screenBounds.width && 
                 currentLocation.y + petHeight <= screenBounds.y + screenBounds.height) {
                 
                 // Pet is fully visible on this screen, no need to move
@@ -3102,7 +3377,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 return; // No character set to rescale
             }
             
-            System.out.println("Rescaling character set images to " + petWidth + "x" + petHeight);
+            // Rescaling character set images to " + petWidth + "x" + petHeight
             
             // Rescale all animation sequences
             rescaleAnimationSequence(currentSet.getIdleAnimation());
@@ -4114,7 +4389,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 @Override
                 public void windowClosed(WindowEvent e) {
-                    System.out.println("Import window closed - pet should continue moving");
+                    // Import window closed - pet should continue moving
                     ensureTimersActive();
                 }
                 
@@ -4211,7 +4486,6 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         
         // If pet is supposed to be walking but isn't, restart movement
         if (currentBehavior == 1 && !isWalking && !isDragging) {
-            System.out.println("Pet should be walking but isn't - restarting movement");
             startRandomWalk();
         }
         
@@ -4219,7 +4493,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
         if (currentSet != null && isWalking) {
             if (currentSet.getWalkingAnimation().getFrameCount() > 0 && !multiFrameAnimationTimer.isRunning()) {
-                System.out.println("Pet is walking but multi-frame animation not running - restarting animation");
+                // Pet is walking but multi-frame animation not running - restarting animation
                 currentSet.getWalkingAnimation().reset();
                 multiFrameAnimationTimer.start();
             }
@@ -4631,7 +4905,7 @@ class CharacterSet {
         this.idleAnimation = new AnimationSequence("idle", true);
         this.walkingAnimation = new AnimationSequence("walking", true);
         this.specialAnimation = new AnimationSequence("special", false);
-        this.painAnimation = new AnimationSequence("pain", false);
+        this.painAnimation = new AnimationSequence("pain", true); // Pain should loop during the effect
     }
     
     // Getters
@@ -6927,6 +7201,8 @@ class EnemyWindow extends JWindow {
     private int currentAnimationFrame = 0;
     private Point lastLocation;
     private int flickerCount = 0;
+    private long lastCollisionTime = 0; // Track last collision time for cooldown
+    private static final long COLLISION_COOLDOWN_MS = 2000; // 2 second cooldown between collisions
     
     public EnemyWindow(AdvancedDesktopPet pet, List<ImageIcon> images) {
         this.targetPet = pet;
@@ -6959,6 +7235,36 @@ class EnemyWindow extends JWindow {
         enemyLabel.setPreferredSize(new Dimension(enemyWidth, enemyHeight));
         add(enemyLabel);
         
+        // Also add mouse listener to the label itself to ensure clicks are captured
+        enemyLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                System.out.println("ENEMY LABEL CLICK DETECTED: button=" + e.getButton() + 
+                                   ", clickCount=" + e.getClickCount() + 
+                                   ", x=" + e.getX() + ", y=" + e.getY() + 
+                                   ", source=" + e.getSource().getClass().getName() +
+                                   ", Enemy ID: " + EnemyWindow.this.hashCode());
+                
+                // Only trigger pain mode on real left mouse button click
+                if (e.getButton() == MouseEvent.BUTTON1 && e.getClickCount() == 1) {
+                    System.out.println("ENEMY: Label clicked by user! Starting pain mode...");
+                    startEnemyPainAnimation();
+                } else {
+                    System.out.println("ENEMY: Label click ignored - not a left single click (button=" + e.getButton() + ", clicks=" + e.getClickCount() + ")");
+                }
+            }
+            
+            @Override
+            public void mousePressed(MouseEvent e) {
+                System.out.println("ENEMY LABEL MOUSE PRESSED: button=" + e.getButton() + ", Enemy ID: " + EnemyWindow.this.hashCode());
+            }
+            
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                System.out.println("ENEMY LABEL MOUSE RELEASED: button=" + e.getButton() + ", Enemy ID: " + EnemyWindow.this.hashCode());
+            }
+        });
+        
         // Load random enemy image and scale it to match enemy size
         if (!enemyImages.isEmpty()) {
             try {
@@ -6981,6 +7287,36 @@ class EnemyWindow extends JWindow {
         setLocation(petLocation.x + offsetX, petLocation.y + offsetY);
         
         setVisible(true);
+        
+        // Add mouse listener for enemy click handling
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                System.out.println("ENEMY CLICK DETECTED: button=" + e.getButton() + 
+                                   ", clickCount=" + e.getClickCount() + 
+                                   ", x=" + e.getX() + ", y=" + e.getY() + 
+                                   ", source=" + e.getSource().getClass().getName() +
+                                   ", Enemy ID: " + EnemyWindow.this.hashCode());
+                
+                // Only trigger pain mode on real left mouse button click
+                if (e.getButton() == MouseEvent.BUTTON1 && e.getClickCount() == 1) {
+                    System.out.println("ENEMY: Clicked by user! Starting pain mode...");
+                    startEnemyPainAnimation();
+                } else {
+                    System.out.println("ENEMY: Click ignored - not a left single click (button=" + e.getButton() + ", clicks=" + e.getClickCount() + ")");
+                }
+            }
+            
+            @Override
+            public void mousePressed(MouseEvent e) {
+                System.out.println("ENEMY MOUSE PRESSED: button=" + e.getButton() + ", Enemy ID: " + EnemyWindow.this.hashCode());
+            }
+            
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                System.out.println("ENEMY MOUSE RELEASED: button=" + e.getButton() + ", Enemy ID: " + EnemyWindow.this.hashCode());
+            }
+        });
         
         // Add window listener for proper cleanup
         addWindowListener(new WindowAdapter() {
@@ -7026,7 +7362,10 @@ class EnemyWindow extends JWindow {
             }
             horrorEffectTimer = new Timer(3000 + random.nextInt(4000), e -> {
                 try {
-                    createHorrorEffect();
+                    // Don't create horror effects if enemy is in pain mode
+                    if (!isEnemyPainActive) {
+                        createHorrorEffect();
+                    }
                     // Randomize next horror effect timing
                     if (horrorEffectTimer != null) {
                         horrorEffectTimer.setDelay(2000 + random.nextInt(6000));
@@ -7085,28 +7424,77 @@ class EnemyWindow extends JWindow {
     private void followPet() {
         if (targetPet == null) return;
         
+        // Don't move if enemy is in pain mode
+        if (isEnemyPainActive) {
+            return;
+        }
+        
         try {
             Point petLocation = targetPet.getLocation();
             Point currentLocation = getLocation();
             
             // Validate locations
             if (petLocation == null || currentLocation == null) {
-                System.out.println("Invalid location detected, skipping movement");
                 return;
             }
             
+            // --- Improved collision detection: trigger pain effect only on actual touch ---
             // Calculate distance to pet
             double distance = Math.sqrt(Math.pow(petLocation.x - currentLocation.x, 2) + 
                                        Math.pow(petLocation.y - currentLocation.y, 2));
             
+            // Calculate dynamic distance threshold based on pet and enemy sizes
+            // Use the larger of pet width/height and enemy width/height as base, then add some padding
+            int petMaxSize = Math.max(targetPet.getWidth(), targetPet.getHeight());
+            int enemyMaxSize = Math.max(getWidth(), getHeight());
+            int maxSize = Math.max(petMaxSize, enemyMaxSize);
+            int distanceThreshold = maxSize / 2; // Half the size of the larger object
+            
+                    // Debug size information (only print occasionally to avoid spam)
+        if (random.nextInt(1000) == 0) { // 0.1% chance to print debug info (further reduced)
+            System.out.println("Size debug - Pet: " + targetPet.getWidth() + "x" + targetPet.getHeight() + 
+                             ", Enemy: " + getWidth() + "x" + getHeight() + 
+                             ", Max size: " + maxSize + ", Distance threshold: " + distanceThreshold + "px");
+        }
+            
+            // Only trigger pain if enemy is within the dynamic threshold and rectangles actually overlap
+            if (distance <= distanceThreshold) {
+                Rectangle enemyRect = new Rectangle(currentLocation.x, currentLocation.y, getWidth(), getHeight());
+                Rectangle petRect = new Rectangle(petLocation.x, petLocation.y, targetPet.getWidth(), targetPet.getHeight());
+                
+                if (enemyRect.intersects(petRect)) {
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastCollisionTime > COLLISION_COOLDOWN_MS && targetPet.isVulnerableToPain()) {
+                        System.out.println("COLLISION DETECTED! Distance: " + String.format("%.1f", distance) + 
+                                         "px (threshold: " + distanceThreshold + "px), Enemy at (" + currentLocation.x + "," + currentLocation.y + 
+                                         "), Pet at (" + petLocation.x + "," + petLocation.y + ")");
+                        targetPet.startPainAnimation();
+                        lastCollisionTime = currentTime;
+                    } else if (currentTime - lastCollisionTime <= COLLISION_COOLDOWN_MS) {
+                        System.out.println("Collision ignored due to cooldown - Distance: " + String.format("%.1f", distance) + 
+                                         "px (threshold: " + distanceThreshold + "px), Time since last collision: " + (currentTime - lastCollisionTime) + "ms");
+                    } else if (!targetPet.isVulnerableToPain()) {
+                        System.out.println("Collision ignored - Pet is not vulnerable (in pain or power mode) - Distance: " + String.format("%.1f", distance) + 
+                                         "px (threshold: " + distanceThreshold + "px)");
+                    }
+                } else {
+                    System.out.println("Close but no collision - Distance: " + String.format("%.1f", distance) + 
+                                     "px (threshold: " + distanceThreshold + "px), Rectangles don't overlap");
+                }
+            }
+            // --- End collision detection ---
+            
+            // Calculate dynamic follow distance based on sizes
+            int followDistance = maxSize * 3 / 4; // 75% of the larger object's size
+            
             // Follow pet but maintain some distance (don't get too close)
-            if (distance > 80) {
+            if (distance > followDistance) {
                 // Move towards pet
                 int stepSize = 2 + random.nextInt(3); // Random step size for creepy movement
                 int dx = petLocation.x - currentLocation.x;
                 int dy = petLocation.y - currentLocation.y;
                     
-                System.out.println("Enemy following pet - dx: " + dx + ", enemy to " + (dx > 0 ? "LEFT" : "RIGHT") + " of pet, should face: " + (dx > 0 ? "RIGHT" : "LEFT") + ", current facing: " + (enemyFacingRight ? "RIGHT" : "LEFT"));
+                // Removed excessive follow logging to reduce spam
                 
                 // Normalize movement
                 if (Math.abs(dx) > stepSize) dx = dx > 0 ? stepSize : -stepSize;
@@ -7127,8 +7515,6 @@ class EnemyWindow extends JWindow {
                 Point newLocation = new Point(currentLocation.x + dx, currentLocation.y + dy);
                 if (isValidLocation(newLocation)) {
                     setLocation(newLocation);
-                } else {
-                    System.out.println("Invalid new location detected, skipping movement");
                 }
             } else {
                 // If too close, make pet shake and occasionally move away (stalking behavior)
@@ -7152,12 +7538,11 @@ class EnemyWindow extends JWindow {
             // Update last location for next frame
             lastLocation = new Point(currentLocation);
         } catch (Exception e) {
-            System.out.println("Error in enemy followPet: " + e.getMessage());
             // Try to recover by restarting timers
             try {
                 restartTimers();
             } catch (Exception ex) {
-                System.out.println("Failed to restart timers after followPet error: " + ex.getMessage());
+                // Silent recovery
             }
         }
     }
@@ -7543,15 +7928,15 @@ class EnemyWindow extends JWindow {
             // Should face right but currently facing left
             enemyFacingRight = true;
             updateEnemySprite();
-            System.out.println("Enemy changed to face RIGHT (dx: " + dx + ")");
         } else if (!shouldFaceRight && enemyFacingRight) {
             // Should face left but currently facing right
             enemyFacingRight = false;
             updateEnemySprite();
-            System.out.println("Enemy changed to face LEFT (dx: " + dx + ")");
         }
-        // Add debug info even when no change is needed
-        System.out.println("Enemy direction check - dx: " + dx + ", should face: " + (shouldFaceRight ? "RIGHT" : "LEFT") + ", currently facing: " + (enemyFacingRight ? "RIGHT" : "LEFT"));
+        // Add debug info only when direction changes
+        if (shouldFaceRight != enemyFacingRight) {
+            System.out.println("Enemy direction check - dx: " + dx + ", should face: " + (shouldFaceRight ? "RIGHT" : "LEFT") + ", currently facing: " + (enemyFacingRight ? "RIGHT" : "LEFT"));
+        }
     }
     
     // Update enemy sprite with correct direction
@@ -7575,7 +7960,135 @@ class EnemyWindow extends JWindow {
             // Update the display
             updateEnemySprite();
             
-            System.out.println("Updated enemy with new character set images (" + newImages.size() + " images)");
+            // Updated enemy with new character set images (" + newImages.size() + " images)
+        }
+    }
+    
+    // Enemy pain state variables
+    private boolean isEnemyPainActive = false;
+    private int enemyPainCycleCount = 0;
+    private static final int ENEMY_MAX_PAIN_CYCLES = 3;
+    private Timer enemyPainTimer;
+    
+    /**
+     * Start enemy pain animation when clicked
+     */
+    private void startEnemyPainAnimation() {
+        System.out.println("ENEMY: startEnemyPainAnimation() called - ID: " + EnemyWindow.this.hashCode() + ", isEnemyPainActive: " + isEnemyPainActive);
+        
+        if (isEnemyPainActive) {
+            System.out.println("ENEMY: Already in pain mode, ignoring click");
+            return;
+        }
+        
+        System.out.println("ENEMY: Starting pain mode (3 cycles) - ID: " + EnemyWindow.this.hashCode());
+        isEnemyPainActive = true;
+        System.out.println("ENEMY: isEnemyPainActive set to TRUE - ID: " + EnemyWindow.this.hashCode());
+        enemyPainCycleCount = 0;
+        
+        // Add visual feedback - make enemy flicker red or change appearance
+        startEnemyPainVisualEffect();
+        
+        // Stop all movement timers immediately
+        if (followTimer != null && followTimer.isRunning()) {
+            followTimer.stop();
+        }
+        if (horrorEffectTimer != null && horrorEffectTimer.isRunning()) {
+            horrorEffectTimer.stop();
+        }
+        if (animationTimer != null && animationTimer.isRunning()) {
+            animationTimer.stop();
+        }
+        
+        // Start pain cycle timer (similar to pet pain system)
+        if (enemyPainTimer != null) {
+            enemyPainTimer.stop();
+        }
+        
+        enemyPainTimer = new Timer(500, e -> { // 500ms per cycle
+            enemyPainCycleCount++;
+            
+            if (enemyPainCycleCount >= ENEMY_MAX_PAIN_CYCLES) {
+                // Pain mode ended, restart normal behavior
+                System.out.println("ENEMY: Pain completed, returning to normal - ID: " + EnemyWindow.this.hashCode());
+                stopEnemyPainAnimation();
+            }
+        });
+        enemyPainTimer.start();
+    }
+    
+    /**
+     * Start visual pain effect for enemy
+     */
+    private void startEnemyPainVisualEffect() {
+        System.out.println("ENEMY: Starting visual pain effect - ID: " + EnemyWindow.this.hashCode());
+        
+        // Immediate visual feedback - make enemy flash red or change color
+        enemyLabel.setBackground(Color.RED);
+        enemyLabel.setOpaque(true);
+        repaint();
+        
+        // Create a pain effect timer that makes the enemy flicker or change appearance
+        Timer painVisualTimer = new Timer(200, new ActionListener() {
+            private int flickerCount = 0;
+            private boolean isVisible = true;
+            
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (!isEnemyPainActive) {
+                    // Pain ended, restore normal appearance
+                    setVisible(true);
+                    enemyLabel.setOpaque(false);
+                    enemyLabel.setBackground(null);
+                    repaint();
+                    ((Timer) e.getSource()).stop();
+                    return;
+                }
+                
+                flickerCount++;
+                
+                // Flicker effect - alternate between visible and invisible
+                isVisible = !isVisible;
+                setVisible(isVisible);
+                
+                // Stop flickering after 6 cycles (1.2 seconds total)
+                if (flickerCount >= 6) {
+                    setVisible(true);
+                    enemyLabel.setOpaque(false);
+                    enemyLabel.setBackground(null);
+                    repaint();
+                    ((Timer) e.getSource()).stop();
+                }
+            }
+        });
+        painVisualTimer.start();
+    }
+    
+    /**
+     * Stop enemy pain animation and return to normal
+     */
+    private void stopEnemyPainAnimation() {
+        if (!isEnemyPainActive) return;
+        
+        System.out.println("ENEMY: Pain mode ended, returning to normal - ID: " + EnemyWindow.this.hashCode());
+        isEnemyPainActive = false;
+        System.out.println("ENEMY: isEnemyPainActive set to FALSE - ID: " + EnemyWindow.this.hashCode());
+        enemyPainCycleCount = 0;
+        
+        // Stop pain timer
+        if (enemyPainTimer != null && enemyPainTimer.isRunning()) {
+            enemyPainTimer.stop();
+        }
+        
+        // Restart all timers
+        if (followTimer != null && !followTimer.isRunning()) {
+            followTimer.start();
+        }
+        if (horrorEffectTimer != null && !horrorEffectTimer.isRunning()) {
+            horrorEffectTimer.start();
+        }
+        if (animationTimer != null && !animationTimer.isRunning()) {
+            animationTimer.start();
         }
     }
 } 
