@@ -303,6 +303,41 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         englishTexts.put("switch_character", "Switch Character");
         englishTexts.put("Debug_Enemy_Count", "Debug Enemy Count");
         
+        // Character Import Window translations
+        englishTexts.put("import_window_title", "Character Set Import Manager");
+        englishTexts.put("character_set_info", "Character Set Information");
+        englishTexts.put("type", "Type:");
+        englishTexts.put("existing_sets", "Existing Sets:");
+        englishTexts.put("set_name", "Set Name:");
+        englishTexts.put("author", "Author:");
+        englishTexts.put("description", "Description:");
+        englishTexts.put("pet_character", "Pet Character");
+        englishTexts.put("enemy_character", "Enemy Character");
+        englishTexts.put("create_new", "-- Create New --");
+        englishTexts.put("animation_import", "Animation Import");
+        englishTexts.put("preview", "Preview");
+        englishTexts.put("idle_animation", "Idle Animation");
+        englishTexts.put("walking_animation", "Walking Animation");
+        englishTexts.put("special_animation", "Special Animation");
+        englishTexts.put("pain_animation", "Pain Animation");
+        englishTexts.put("import_images", "Import Images");
+        englishTexts.put("export_set", "Export Set");
+        englishTexts.put("save_set", "Save Set");
+        englishTexts.put("delete_set", "Delete Set");
+        englishTexts.put("test_in_pet", "Test in Pet");
+        englishTexts.put("edit_properties", "Edit Properties");
+        englishTexts.put("set_as_default", "Set as Default");
+        englishTexts.put("no_character_set", "No Character Set");
+        englishTexts.put("no_character_set_selected", "No character set selected. Please select or create a character set first.");
+        englishTexts.put("default_pet_set", "Default Pet Set");
+        englishTexts.put("default_enemy_set", "Default Enemy Set");
+        englishTexts.put("set_default_pet", "Set default pet character to: ");
+        englishTexts.put("set_default_enemy", "Set default enemy character to: ");
+        englishTexts.put("default_char_message", "This character will be used when the program starts.");
+        englishTexts.put("default_enemy_message", "This character will be used for new enemies.");
+        englishTexts.put("error", "Error");
+        englishTexts.put("error_setting_default", "Error setting default character: ");
+        
         // Initialize Chinese texts
         chineseTexts.put("settings_title", "\u684c\u9762\u684c\u5ba0\u8bbe\u7f6e");
         chineseTexts.put("pet_management", "\u684c\u5ba0\u7ba1\u7406");
@@ -337,10 +372,45 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         chineseTexts.put("character_section", "\u89d2\u8272\u5bfc\u5165");
         chineseTexts.put("import_character", "\u5bfc\u5165\u89d2\u8272");
         chineseTexts.put("switch_character", "\u5207\u6362\u89d2\u8272");
-        chineseTexts.put("Debug_Enemy_Count", "\u6e05\u9664\u654c\u4eba");
+        chineseTexts.put("Debug_Enemy_Count", "\u6e21\u5be9\u6574\u6570\u654c\u4eba");
+        
+        // Character Import Window Chinese translations
+        chineseTexts.put("import_window_title", "\u89d2\u8272\u96c6\u5408\u5bfc\u5165\u7ba1\u7406\u5668");
+        chineseTexts.put("character_set_info", "\u89d2\u8272\u96c6\u5408\u4fe1\u606f");
+        chineseTexts.put("type", "\u7c7b\u578b\uff1a");
+        chineseTexts.put("existing_sets", "\u5b58\u5728\u7684\u96c6\u5408\uff1a");
+        chineseTexts.put("set_name", "\u96c6\u5408\u540d\u79f0\uff1a");
+        chineseTexts.put("author", "\u4f5c\u8005\uff1a");
+        chineseTexts.put("description", "\u63cf\u8ff0\uff1a");
+        chineseTexts.put("pet_character", "\u5b9c\u7269\u89d2\u8272");
+        chineseTexts.put("enemy_character", "\u654c\u4eba\u89d2\u8272");
+        chineseTexts.put("create_new", "-- \u521b\u5efa\u65b0\u7684 --");
+        chineseTexts.put("animation_import", "\u52a8\u753b\u5bfc\u5165");
+        chineseTexts.put("preview", "\u9884\u89c8");
+        chineseTexts.put("idle_animation", "\u7a7a\u95f2\u52a8\u753b");
+        chineseTexts.put("walking_animation", "\u884c\u8d70\u52a8\u753b");
+        chineseTexts.put("special_animation", "\u7279\u6b8a\u52a8\u753b");
+        chineseTexts.put("pain_animation", "\u75bc\u75db\u52a8\u753b");
+        chineseTexts.put("import_images", "\u5bfc\u5165\u56fe\u7247");
+        chineseTexts.put("export_set", "\u5bfc\u51fa\u96c6\u5408");
+        chineseTexts.put("save_set", "\u4fdd\u5b58\u96c6\u5408");
+        chineseTexts.put("delete_set", "\u5220\u9664\u96c6\u5408");
+        chineseTexts.put("test_in_pet", "\u5728\u5b9c\u7269\u4e2d\u6d4b\u8bd5");
+        chineseTexts.put("edit_properties", "\u7f16\u8f91\u5c5e\u6027");
+        chineseTexts.put("set_as_default", "\u8bbe\u4e3a\u9ed8\u8ba4");
+        chineseTexts.put("no_character_set", "\u6ca1\u6709\u89d2\u8272\u96c6\u5408");
+        chineseTexts.put("no_character_set_selected", "\u6ca1\u6709\u9009\u62e9\u89d2\u8272\u96c6\u5408\u3002\u8bf7\u5148\u9009\u62e9\u6216\u521b\u5efa\u4e00\u4e2a\u89d2\u8272\u96c6\u5408\u3002");
+        chineseTexts.put("default_pet_set", "\u9ed8\u8ba4\u5b9c\u7269\u96c6\u5408");
+        chineseTexts.put("default_enemy_set", "\u9ed8\u8ba4\u654c\u4eba\u96c6\u5408");
+        chineseTexts.put("set_default_pet", "\u5c06\u9ed8\u8ba4\u5b9c\u7269\u89d2\u8272\u8bbe\u7f6e\u4e3a\uff1a");
+        chineseTexts.put("set_default_enemy", "\u5c06\u9ed8\u8ba4\u654c\u4eba\u89d2\u8272\u8bbe\u7f6e\u4e3a\uff1a");
+        chineseTexts.put("default_char_message", "\u6b64\u89d2\u8272\u5c06\u5728\u7a0b\u5e8f\u542f\u52a8\u65f6\u4f7f\u7528\u3002");
+        chineseTexts.put("default_enemy_message", "\u6b64\u89d2\u8272\u5c06\u7528\u4e8e\u65b0\u7684\u654c\u4eba\u3002");
+        chineseTexts.put("error", "\u9519\u8bef");
+        chineseTexts.put("error_setting_default", "\u8bbe\u7f6e\u9ed8\u8ba4\u89d2\u8272\u65f6\u51fa\u9519\uff1a");
     }
     
-    private String getText(String key) {
+    public String getText(String key) {
         Map<String, String> currentTexts = isChinese ? chineseTexts : englishTexts;
         String result = currentTexts.getOrDefault(key, key);
         // Remove debug output to reduce console spam
@@ -4032,7 +4102,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         debugTimerStates("Before opening import window");
         
         if (characterImportWindow == null) {
-            characterImportWindow = new CharacterImportWindow();
+            characterImportWindow = new CharacterImportWindow(this);
             
             // Add window listener to ensure pet continues moving when import window is active
             characterImportWindow.addWindowListener(new WindowAdapter() {
@@ -4579,6 +4649,10 @@ class CharacterSet {
     public void setDescription(String description) { this.description = description; }
     public void setAuthorName(String authorName) { this.authorName = authorName; }
     public void setSetPath(String setPath) { this.setPath = setPath; }
+    public void setIdleAnimation(AnimationSequence idleAnimation) { this.idleAnimation = idleAnimation; }
+    public void setWalkingAnimation(AnimationSequence walkingAnimation) { this.walkingAnimation = walkingAnimation; }
+    public void setSpecialAnimation(AnimationSequence specialAnimation) { this.specialAnimation = specialAnimation; }
+    public void setPainAnimation(AnimationSequence painAnimation) { this.painAnimation = painAnimation; }
     
     /**
      * Check if character set has all required animations
@@ -5358,6 +5432,7 @@ class CharacterImportWindow extends JFrame {
     private CharacterSetManager characterSetManager;
     private CharacterSet currentWorkingSet;
     private String currentSetType; // "pet" or "enemy"
+    private AdvancedDesktopPet parentPet; // Reference to parent for translation access
     
     // UI Components
     private JTextField setNameField;
@@ -5387,11 +5462,15 @@ class CharacterImportWindow extends JFrame {
     private JButton editButton;
     private JButton setDefaultButton;
     
-    public CharacterImportWindow() {
+    public CharacterImportWindow(AdvancedDesktopPet parent) {
         super("Character Set Import Manager");
         
+        this.parentPet = parent;
         characterSetManager = CharacterSetManager.getInstance();
         currentSetType = "pet";
+        
+        // Update title with proper translation
+        setTitle(getText("import_window_title"));
         
         initializeUI();
         initializeEventHandlers();
@@ -5424,6 +5503,16 @@ class CharacterImportWindow extends JFrame {
         });
     }
     
+    /**
+     * Get translated text from parent pet instance
+     */
+    private String getText(String key) {
+        if (parentPet != null) {
+            return parentPet.getText(key);
+        }
+        return key; // fallback to key if parent is null
+    }
+    
     private void initializeUI() {
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -5451,22 +5540,22 @@ class CharacterImportWindow extends JFrame {
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        panel.setBorder(BorderFactory.createTitledBorder("Character Set Information"));
+        panel.setBorder(BorderFactory.createTitledBorder(getText("character_set_info")));
         
         // Set type selection
         gbc.gridx = 0; gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
-        panel.add(new JLabel("Type:"), gbc);
+        panel.add(new JLabel(getText("type")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        setTypeCombo = new JComboBox<>(new String[]{"Pet Character", "Enemy Character"});
+        setTypeCombo = new JComboBox<>(new String[]{getText("pet_character"), getText("enemy_character")});
         panel.add(setTypeCombo, gbc);
         
         // Existing sets
         gbc.gridx = 0; gbc.gridy = 1;
         gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Existing Sets:"), gbc);
+        panel.add(new JLabel(getText("existing_sets")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
@@ -5478,7 +5567,7 @@ class CharacterImportWindow extends JFrame {
         // Set name
         gbc.gridx = 0; gbc.gridy = 2;
         gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Set Name:"), gbc);
+        panel.add(new JLabel(getText("set_name")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
@@ -5488,7 +5577,7 @@ class CharacterImportWindow extends JFrame {
         // Author
         gbc.gridx = 0; gbc.gridy = 3;
         gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel("Author:"), gbc);
+        panel.add(new JLabel(getText("author")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
@@ -5499,7 +5588,7 @@ class CharacterImportWindow extends JFrame {
         gbc.gridx = 0; gbc.gridy = 4;
         gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.NORTHWEST;
-        panel.add(new JLabel("Description:"), gbc);
+        panel.add(new JLabel(getText("description")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 1.0; gbc.weighty = 1.0;
         descriptionArea = new JTextArea(3, 20);
@@ -5527,13 +5616,13 @@ class CharacterImportWindow extends JFrame {
     
     private JPanel createAnimationPanel() {
         JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
-        panel.setBorder(BorderFactory.createTitledBorder("Animation Import"));
+        panel.setBorder(BorderFactory.createTitledBorder(getText("animation_import")));
         
         // Create animation import panels
-        idlePanel = new AnimationImportPanel("Idle Animation", true);
-        walkingPanel = new AnimationImportPanel("Walking Animation", true);
-        specialPanel = new AnimationImportPanel("Special Animation", false);
-        painPanel = new AnimationImportPanel("Pain Animation", false);
+        idlePanel = new AnimationImportPanel(getText("idle_animation"), true);
+        walkingPanel = new AnimationImportPanel(getText("walking_animation"), true);
+        specialPanel = new AnimationImportPanel(getText("special_animation"), false);
+        painPanel = new AnimationImportPanel(getText("pain_animation"), false);
         
         panel.add(idlePanel);
         panel.add(walkingPanel);
@@ -5545,7 +5634,7 @@ class CharacterImportWindow extends JFrame {
     
     private JPanel createPreviewPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Preview"));
+        panel.setBorder(BorderFactory.createTitledBorder(getText("preview")));
         panel.setPreferredSize(new Dimension(200, 0));
         
         // Preview display
@@ -5562,13 +5651,13 @@ class CharacterImportWindow extends JFrame {
         
         // Preview controls
         JPanel controlPanel = new JPanel(new GridLayout(5, 1, 5, 5));
-        controlPanel.setBorder(BorderFactory.createTitledBorder("Preview Controls"));
+        controlPanel.setBorder(BorderFactory.createTitledBorder(getText("preview_controls")));
         
-        JButton previewIdleBtn = new JButton("Preview Idle");
-        JButton previewWalkBtn = new JButton("Preview Walk");
-        JButton previewSpecialBtn = new JButton("Preview Special");
-        JButton previewPainBtn = new JButton("Preview Pain");
-        JButton stopPreviewBtn = new JButton("Stop Preview");
+        JButton previewIdleBtn = new JButton(getText("preview_idle"));
+        JButton previewWalkBtn = new JButton(getText("preview_walk"));
+        JButton previewSpecialBtn = new JButton(getText("preview_special"));
+        JButton previewPainBtn = new JButton(getText("preview_pain"));
+        JButton stopPreviewBtn = new JButton(getText("stop_preview"));
         
         controlPanel.add(previewIdleBtn);
         controlPanel.add(previewWalkBtn);
@@ -5591,14 +5680,14 @@ class CharacterImportWindow extends JFrame {
     private JPanel createFooterPanel() {
         JPanel panel = new JPanel(new FlowLayout());
         
-        importButton = new JButton("Import Images");
-        exportButton = new JButton("Export Set");
-        saveButton = new JButton("Save Set");
-        deleteButton = new JButton("Delete Set");
-        testButton = new JButton("Test in Pet");
-        editButton = new JButton("Edit Properties");
-        setDefaultButton = new JButton("Set as Default");
-        JButton closeButton = new JButton("Close");
+        importButton = new JButton(getText("import_images"));
+        exportButton = new JButton(getText("export_set"));
+        saveButton = new JButton(getText("save_set"));
+        deleteButton = new JButton(getText("delete_set"));
+        testButton = new JButton(getText("test_in_pet"));
+        editButton = new JButton(getText("edit_properties"));
+        setDefaultButton = new JButton(getText("set_as_default"));
+        JButton closeButton = new JButton(getText("close"));
         
         panel.add(importButton);
         panel.add(exportButton);
@@ -5654,8 +5743,8 @@ class CharacterImportWindow extends JFrame {
     private void setCurrentCharacterAsDefault() {
         if (currentWorkingSet == null) {
             JOptionPane.showMessageDialog(this, 
-                "No character set selected. Please select or create a character set first.", 
-                "No Character Set", 
+                getText("no_character_set_selected"), 
+                getText("no_character_set"), 
                 JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -5666,16 +5755,16 @@ class CharacterImportWindow extends JFrame {
             if (currentSetType.equals("pet")) {
                 characterSetManager.setDefaultPetCharacterSet(setName);
                 JOptionPane.showMessageDialog(this, 
-                    "Set default pet character to: " + setName + "\n" +
-                    "This character will be used when the program starts.", 
-                    "Default Pet Set", 
+                    getText("set_default_pet") + setName + "\n" +
+                    getText("default_char_message"), 
+                    getText("default_pet_set"), 
                     JOptionPane.INFORMATION_MESSAGE);
             } else {
                 characterSetManager.setDefaultEnemyCharacterSet(setName);
                 JOptionPane.showMessageDialog(this, 
-                    "Set default enemy character to: " + setName + "\n" +
-                    "This character will be used for new enemies.", 
-                    "Default Enemy Set", 
+                    getText("set_default_enemy") + setName + "\n" +
+                    getText("default_enemy_message"), 
+                    getText("default_enemy_set"), 
                     JOptionPane.INFORMATION_MESSAGE);
             }
             
@@ -5684,15 +5773,15 @@ class CharacterImportWindow extends JFrame {
         } catch (Exception ex) {
             System.out.println("Error setting default character: " + ex.getMessage());
             JOptionPane.showMessageDialog(this, 
-                "Error setting default character: " + ex.getMessage(), 
-                "Error", 
+                getText("error_setting_default") + ex.getMessage(), 
+                getText("error"), 
                 JOptionPane.ERROR_MESSAGE);
         }
     }
     
     private void refreshExistingSetsList() {
         existingSetCombo.removeAllItems();
-        existingSetCombo.addItem(new CharacterSetItem("-- Create New --"));
+        existingSetCombo.addItem(new CharacterSetItem(getText("create_new")));
         
         Set<String> setNames = currentSetType.equals("pet") ? 
             characterSetManager.getPetCharacterSetNames() : 
@@ -5807,11 +5896,7 @@ class CharacterImportWindow extends JFrame {
                     System.out.println("Automatically switched enemies to character set: " + setName);
                 }
                 
-            } else {
-                System.out.println("Character set not found: " + setName);
-                JOptionPane.showMessageDialog(this, "Character set not found: " + setName, 
-                                            "Error", JOptionPane.ERROR_MESSAGE);
-            }
+            } 
             
         } catch (Exception e) {
             System.out.println("Error loading character set: " + e.getMessage());
@@ -6108,13 +6193,13 @@ class CharacterImportWindow extends JFrame {
             
             try {
                 // Export functionality would be implemented here
-                JOptionPane.showMessageDialog(this, "Export functionality coming soon!", 
-                                            "Info", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, getText("export_functionality_coming_soon"), 
+                                            getText("info"), JOptionPane.INFORMATION_MESSAGE);
                 
             } catch (Exception e) {
                 System.out.println("Error exporting character set: " + e.getMessage());
-                JOptionPane.showMessageDialog(this, "Error exporting character set: " + e.getMessage(), 
-                                            "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, getText("error_exporting_character_set") + e.getMessage(), 
+                                            getText("error"), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -6124,8 +6209,8 @@ class CharacterImportWindow extends JFrame {
      */
     private void openCharacterEditDialog() {
         if (currentWorkingSet == null) {
-            JOptionPane.showMessageDialog(this, "Please create or select a character set first.", 
-                                        "No Character Set", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, getText("please_create_or_select_character_set_first"), 
+                                        getText("no_character_set"), JOptionPane.WARNING_MESSAGE);
             return;
         }
         
@@ -6159,7 +6244,7 @@ class CharacterImportWindow extends JFrame {
     private void stopPreview() {
         previewTimer.stop();
         previewLabel.setIcon(null);
-        previewLabel.setText("Preview stopped");
+        previewLabel.setText(getText("preview_stopped"));
         currentPreviewType = "";
         System.out.println("Preview stopped");
     }
@@ -6253,7 +6338,7 @@ class CharacterImportWindow extends JFrame {
             // If we get here, no valid frames found
             previewTimer.stop();
             previewLabel.setIcon(null);
-            previewLabel.setText("No frames available");
+            previewLabel.setText(getText("no_frames_available"));
             System.out.println("No frames available for preview: " + currentPreviewType);
             
         } catch (Exception e) {
@@ -6332,20 +6417,17 @@ class CharacterEditDialog extends JDialog {
         descriptionField = new JTextArea(3, 20);
         descriptionField.setLineWrap(true);
         descriptionField.setWrapStyleWord(true);
-        JScrollPane descScrollPane = new JScrollPane(descriptionField);
-        mainPanel.add(descScrollPane, gbc);
+        JScrollPane scrollPane = new JScrollPane(descriptionField);
+        mainPanel.add(scrollPane, gbc);
         
-        // Image direction controls
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; gbc.weighty = 0.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        JPanel flipPanel = createFlipPanel();
-        mainPanel.add(flipPanel, gbc);
+        // Add flip and replace panels
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1.0; gbc.weighty = 0.4;
         
-        // Image replacement controls  
-        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2;
-        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weighty = 0.0;
-        JPanel replacePanel = createReplacePanel();
-        mainPanel.add(replacePanel, gbc);
+        JPanel actionPanel = new JPanel(new GridLayout(1, 2, 10, 0));
+        actionPanel.add(createFlipPanel());
+        actionPanel.add(createReplacePanel());
+        mainPanel.add(actionPanel, gbc);
         
         add(mainPanel, BorderLayout.CENTER);
         
@@ -6357,17 +6439,20 @@ class CharacterEditDialog extends JDialog {
         okButton.addActionListener(e -> {
             saveChanges();
             confirmed = true;
-            setVisible(false);
+            dispose();
         });
         
         cancelButton.addActionListener(e -> {
             confirmed = false;
-            setVisible(false);
+            dispose();
         });
         
         buttonPanel.add(okButton);
         buttonPanel.add(cancelButton);
         add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Load current data
+        loadCurrentData();
     }
     
     private JPanel createFlipPanel() {
@@ -6415,16 +6500,20 @@ class CharacterEditDialog extends JDialog {
     }
     
     private void loadCurrentData() {
-        nameField.setText(characterSet.getName());
-        authorField.setText(characterSet.getAuthorName());
-        descriptionField.setText(characterSet.getDescription());
-        typeCombo.setSelectedItem(originalType);
+        if (characterSet != null) {
+            nameField.setText(characterSet.getName());
+            authorField.setText(characterSet.getAuthorName());
+            descriptionField.setText(characterSet.getDescription());
+            typeCombo.setSelectedItem(originalType);
+        }
     }
     
     private void saveChanges() {
-        characterSet.setName(nameField.getText().trim());
-        characterSet.setAuthorName(authorField.getText().trim());
-        characterSet.setDescription(descriptionField.getText().trim());
+        if (characterSet != null) {
+            characterSet.setName(nameField.getText());
+            characterSet.setAuthorName(authorField.getText());
+            characterSet.setDescription(descriptionField.getText());
+        }
     }
     
     private void flipAnimationImages(String animationType) {
@@ -6435,9 +6524,10 @@ class CharacterEditDialog extends JDialog {
             return;
         }
         
+        // Flip all images in the sequence
         for (AnimationFrame frame : sequence.getFrames()) {
-            ImageIcon flipped = flipImageHorizontally(frame.getImage());
-            frame.setImage(flipped);
+            ImageIcon flippedImage = flipImageHorizontally(frame.getImage());
+            frame.setImage(flippedImage);
         }
         
         JOptionPane.showMessageDialog(this, "Flipped " + sequence.getFrameCount() + " " + animationType + " images.", 
@@ -6447,26 +6537,41 @@ class CharacterEditDialog extends JDialog {
     private void replaceAnimationImages(String animationType) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setMultiSelectionEnabled(true);
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-            "Image Files", "png", "jpg", "jpeg", "gif"));
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Image files", "png", "jpg", "jpeg", "gif"));
         
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             File[] selectedFiles = fileChooser.getSelectedFiles();
-            
-            AnimationSequence sequence = characterSet.getAnimationByName(animationType);
-            if (sequence != null) {
+            if (selectedFiles.length > 0) {
+                // Replace animation sequence
+                AnimationSequence sequence = characterSet.getAnimationByName(animationType);
+                if (sequence == null) {
+                    // Create new sequence if it doesn't exist
+                    sequence = new AnimationSequence(animationType, animationType.equals("idle") || animationType.equals("walking"));
+                    
+                    // Add to character set
+                    if (animationType.equals("idle")) {
+                        characterSet.setIdleAnimation(sequence);
+                    } else if (animationType.equals("walking")) {
+                        characterSet.setWalkingAnimation(sequence);
+                    } else if (animationType.equals("special")) {
+                        characterSet.setSpecialAnimation(sequence);
+                    } else if (animationType.equals("pain")) {
+                        characterSet.setPainAnimation(sequence);
+                    }
+                }
+                
                 // Clear existing frames
                 sequence.getFrames().clear();
                 
                 // Add new frames
                 for (File file : selectedFiles) {
-                    if (CharacterFileManager.isValidImageFile(file)) {
-                        ImageIcon image = CharacterFileManager.loadAndScaleImagePreserveAspect(file, 256);
-                        if (image != null) {
-                            AnimationFrame frame = new AnimationFrame(image, file.getAbsolutePath(), 150);
-                            sequence.addFrame(frame);
-                        }
+                    try {
+                        ImageIcon imageIcon = new ImageIcon(file.getPath());
+                        AnimationFrame frame = new AnimationFrame(imageIcon, file.getPath(), 200); // Default 200ms duration
+                        sequence.addFrame(frame);
+                    } catch (Exception e) {
+                        System.out.println("Error loading image: " + file.getName() + " - " + e.getMessage());
                     }
                 }
                 
