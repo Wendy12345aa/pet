@@ -3306,7 +3306,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         settingsWindow = new JFrame();
         settingsWindow.setTitle(getText("settings_title"));
         settingsWindow.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-        settingsWindow.setSize(800, 900);
+        settingsWindow.setSize(800, 650);
         settingsWindow.setResizable(false);
         settingsWindow.setLocationRelativeTo(null);
         settingsWindow.setUndecorated(true); // Remove default decorations
@@ -3321,14 +3321,14 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 // Dark background
                 GradientPaint bgGradient = new GradientPaint(0, 0, new Color(20, 20, 35), 
-                                                           800, 900, new Color(35, 20, 45));
+                                                           800, 650, new Color(35, 20, 45));
                 g2d.setPaint(bgGradient);
-                g2d.fillRect(0, 0, 800, 900);
+                g2d.fillRect(0, 0, 800, 650);
                 
                 // Border
                 g2d.setStroke(new BasicStroke(2));
                 g2d.setColor(new Color(80, 80, 120));
-                g2d.drawRect(1, 1, 798, 898);
+                g2d.drawRect(1, 1, 798, 648);
                 
                 // Title bar
                 g2d.setColor(new Color(60, 60, 100, 100));
