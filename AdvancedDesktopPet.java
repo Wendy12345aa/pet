@@ -1275,7 +1275,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         // Current enemy character set: " + (currentEnemySet != null ? currentEnemySet.getName() : "null")
         
         if (currentEnemySet != null && !currentEnemySet.getName().equals("default")) {
-            // Load from character set animations
+            // Load from character set animations (EXCLUDING pain frames - they are handled separately)
             if (currentEnemySet.getIdleAnimation().getFrameCount() > 0) {
                 for (AnimationFrame frame : currentEnemySet.getIdleAnimation().getFrames()) {
                     if (frame.getOriginalImage() != null) {
@@ -1314,17 +1314,10 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 }
             }
             
-            // Add pain animation frames if available
+            // NOTE: Pain animation frames are NOT added to enemyImages list
+            // They are handled separately in startCharacterSetPainAnimation() method
             if (currentEnemySet.getPainAnimation().getFrameCount() > 0) {
-                for (AnimationFrame frame : currentEnemySet.getPainAnimation().getFrames()) {
-                    if (frame.getOriginalImage() != null) {
-                        // Scale enemy image to independent size
-                        Image img = frame.getOriginalImage().getImage();
-                        Image scaledImg = img.getScaledInstance(enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
-                        enemyImages.add(new ImageIcon(scaledImg));
-                        System.out.println("Scaled enemy pain frame to " + enemyWidth + "x" + enemyHeight);
-                    }
-                }
+                System.out.println("Enemy pain animation frames available but not added to normal animation cycle");
             }
         }
         
@@ -1849,8 +1842,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             MusicManager.switchToHorrorMusic();
         }
         
-        // Remove enemy after some time (20-60 seconds)
-        Timer despawnTimer = new Timer(20000 + enemyRandom.nextInt(40000), e -> {
+        // Remove enemy after some time (2-5 minutes)
+        Timer despawnTimer = new Timer(120000 + enemyRandom.nextInt(180000), e -> {
                 try {
             if (enemies.contains(enemy)) {
                         System.out.println("Despawning enemy...");
@@ -2422,10 +2415,10 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                     
                     // Force movement based on current behavior
                     if (currentBehavior == 1) {
-                                    // Pet should be walking - restart movement
+                        // Pet should be walking - restart movement
                         startRandomWalk();
                     } else if (currentBehavior == 0) {
-                                    // Pet is idle - change to walking mode
+                        // Pet is idle - change to walking mode
                         currentBehavior = 1;
                         startRandomWalk();
                     }
@@ -2644,7 +2637,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 
                 // Don't move if pain animation is active
                 if (!isPainAnimationActive) {
-                    setLocation(safeNewLocation);
+                setLocation(safeNewLocation);
                 }
                 
                 // Update walking animation frame for leg sync (for legacy animations only)
@@ -2659,7 +2652,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
                 if (currentSet == null || currentSet.getWalkingAnimation().getFrameCount() == 0) {
                     // Legacy animation - update sprite every 4 frames for leg movement
-                    if (walkAnimationFrame % 4 == 0) {
+                if (walkAnimationFrame % 4 == 0) {
                         updateWalkingSprite();
                     }
                 } else {
@@ -2847,24 +2840,24 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             if (isWalking) {
                 // Pet is walking - ensure walking animation is active
                 if (!multiFrameAnimationTimer.isRunning()) {
-                    currentSet.getWalkingAnimation().reset();
-                    multiFrameAnimationTimer.start();
+                currentSet.getWalkingAnimation().reset();
+                multiFrameAnimationTimer.start();
                     // Started multi-frame walking animation for character set: " + currentSet.getName()
                 }
                 // If timer is already running and we're walking, it will continue with walking frames
             } else {
                 // Pet is not walking - stop walking animation if it's running
                 if (multiFrameAnimationTimer.isRunning()) {
-                    multiFrameAnimationTimer.stop();
-                    System.out.println("Stopped multi-frame walking animation (not walking anymore)");
-                }
+                multiFrameAnimationTimer.stop();
+                System.out.println("Stopped multi-frame walking animation (not walking anymore)");
+            }
             }
         } else {
             // Fall back to legacy animation system
             System.out.println("Using legacy animation for walking (currentSet: " + 
                              (currentSet != null ? currentSet.getName() + " with " + currentSet.getWalkingAnimation().getFrameCount() + " frames" : "null") + ")");
-            ImageIcon sprite = (walkAnimationFrame % 8 < 4) ? walkGif : idleGif; // Alternate between walk and idle for leg movement
-            petLabel.setIcon(getFlippedIcon(sprite));
+        ImageIcon sprite = (walkAnimationFrame % 8 < 4) ? walkGif : idleGif; // Alternate between walk and idle for leg movement
+        petLabel.setIcon(getFlippedIcon(sprite));
         }
     }
     
@@ -3106,8 +3099,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
                 newY = screenBounds.y;
             }
             
-            System.out.println("Pet repositioned from (" + currentLocation.x + ", " + currentLocation.y + 
-                             ") to (" + newX + ", " + newY + ")");
+            // Pet repositioned silently (log removed)
         }
         
         return new Point(newX, newY);
@@ -3124,7 +3116,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             // Check if pet is fully within this screen
             if (currentLocation.x >= screenBounds.x && 
                 currentLocation.y >= screenBounds.y &&
-                currentLocation.x + petWidth <= screenBounds.x + screenBounds.width && 
+                currentLocation.x + petWidth <= screenBounds.x + screenBounds.width &&
                 currentLocation.y + petHeight <= screenBounds.y + screenBounds.height) {
                 
                 // Pet is fully visible on this screen, no need to move
@@ -3853,13 +3845,52 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         contentPanel.add(maxEnemiesSlider, gbc);
         gbc.weightx = 0;
         
-        gbc.gridx = 0; gbc.gridy = 23; gbc.gridwidth = 1;
+        // Enemy Health Section
+        gbc.gridx = 0; gbc.gridy = 23; gbc.gridwidth = 2;
+        JLabel enemyHealthLabel = createLabel("Enemy Health: " + EnemyWindow.getEnemyMaxHealth() + " clicks");
+        contentPanel.add(enemyHealthLabel, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 24; gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
+        JSlider enemyHealthSlider = createSlider(1, 20, EnemyWindow.getEnemyMaxHealth());
+        enemyHealthSlider.setPreferredSize(new Dimension(350, 40));
+        enemyHealthSlider.addChangeListener(e -> {
+            int newHealth = enemyHealthSlider.getValue();
+            EnemyWindow.setEnemyMaxHealth(newHealth);
+            enemyHealthLabel.setText("Enemy Health: " + newHealth + " clicks");
+            System.out.println("Enemy health setting changed to: " + newHealth + " clicks");
+        });
+        contentPanel.add(enemyHealthSlider, gbc);
+        gbc.weightx = 0;
+        
+        // Enemy Death Effect Section
+        gbc.gridx = 0; gbc.gridy = 25; gbc.gridwidth = 2;
+        JLabel enemyDeathEffectLabel = createLabel("Enemy Death Effect: " + EnemyWindow.getEnemyDeathEffect());
+        contentPanel.add(enemyDeathEffectLabel, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 26; gbc.gridwidth = 2;
+        String[] deathEffects = {
+            EnemyWindow.DEATH_EFFECT_FADE_SCALE,
+            EnemyWindow.DEATH_EFFECT_PARTICLES,
+            EnemyWindow.DEATH_EFFECT_SCREEN_SHAKE
+        };
+        JComboBox<String> deathEffectCombo = new JComboBox<>(deathEffects);
+        deathEffectCombo.setSelectedItem(EnemyWindow.getEnemyDeathEffect());
+        deathEffectCombo.addActionListener(e -> {
+            String selectedEffect = (String) deathEffectCombo.getSelectedItem();
+            EnemyWindow.setEnemyDeathEffect(selectedEffect);
+            enemyDeathEffectLabel.setText("Enemy Death Effect: " + selectedEffect);
+            System.out.println("Enemy death effect changed to: " + selectedEffect);
+        });
+        contentPanel.add(deathEffectCombo, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 27; gbc.gridwidth = 1;
         gbc.weightx = 1.0;
         clearEnemiesBtn = createButton(getText("clear_all_enemies"));
         clearEnemiesBtn.addActionListener(e -> stopEnemySystem());
         contentPanel.add(clearEnemiesBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 23;
+        gbc.gridx = 1; gbc.gridy = 27;
         gbc.weightx = 1.0;
         forceCleanupBtn = createButton(getText("force_cleanup"));
         forceCleanupBtn.addActionListener(e -> {
@@ -3881,7 +3912,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         });
         contentPanel.add(forceCleanupBtn, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 24; gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.gridy = 28; gbc.gridwidth = 1;
         gbc.weightx = 1.0;
         debugBtn = createButton(getText("Debug_Enemy_Count"));
         debugBtn.addActionListener(e -> debugEnemyCounts());
@@ -3889,21 +3920,21 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         gbc.weightx = 0; // Reset weight
         
         // Character Import Section
-        characterSectionLabel = addSection(contentPanel, gbc, 25, getText("character_section"));
+        characterSectionLabel = addSection(contentPanel, gbc, 29, getText("character_section"));
         
-        gbc.gridx = 0; gbc.gridy = 26; gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.gridy = 30; gbc.gridwidth = 1;
         gbc.weightx = 1.0;
         importCharacterBtn = createButton(getText("import_character"));
         importCharacterBtn.addActionListener(e -> openCharacterImportWindow());
         contentPanel.add(importCharacterBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 26;
+        gbc.gridx = 1; gbc.gridy = 30;
         gbc.weightx = 1.0;
         switchCharacterBtn = createButton(getText("switch_character"));
         switchCharacterBtn.addActionListener(e -> showCharacterSwitchDialog());
         contentPanel.add(switchCharacterBtn, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 27; gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.gridy = 31; gbc.gridwidth = 1;
         gbc.weightx = 1.0;
         closeBtn = createButton(getText("close"));
         closeBtn.addActionListener(e -> {
@@ -3911,7 +3942,7 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         });
         contentPanel.add(closeBtn, gbc);
         
-        gbc.gridx = 1; gbc.gridy = 27;
+        gbc.gridx = 1; gbc.gridy = 31;
         gbc.weightx = 1.0;
         exitBtn = createButton(getText("exit_program"));
         exitBtn.setBackground(new Color(150, 50, 50)); // Red background for exit button
@@ -7237,31 +7268,62 @@ class EnemyWindow extends JWindow {
         
         // Also add mouse listener to the label itself to ensure clicks are captured
         enemyLabel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                System.out.println("ENEMY LABEL CLICK DETECTED: button=" + e.getButton() + 
-                                   ", clickCount=" + e.getClickCount() + 
-                                   ", x=" + e.getX() + ", y=" + e.getY() + 
-                                   ", source=" + e.getSource().getClass().getName() +
-                                   ", Enemy ID: " + EnemyWindow.this.hashCode());
-                
-                // Only trigger pain mode on real left mouse button click
-                if (e.getButton() == MouseEvent.BUTTON1 && e.getClickCount() == 1) {
-                    System.out.println("ENEMY: Label clicked by user! Starting pain mode...");
-                    startEnemyPainAnimation();
-                } else {
-                    System.out.println("ENEMY: Label click ignored - not a left single click (button=" + e.getButton() + ", clicks=" + e.getClickCount() + ")");
-                }
-            }
+            private Point pressLocation = null;
+            private long pressTime = 0;
+            private static final int CLICK_THRESHOLD_MS = 200; // 200ms max for a click
+            private static final int CLICK_DISTANCE_THRESHOLD = 10; // 10 pixels max movement for a click
             
             @Override
             public void mousePressed(MouseEvent e) {
                 System.out.println("ENEMY LABEL MOUSE PRESSED: button=" + e.getButton() + ", Enemy ID: " + EnemyWindow.this.hashCode());
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    pressLocation = e.getPoint();
+                    pressTime = System.currentTimeMillis();
+                }
             }
             
             @Override
             public void mouseReleased(MouseEvent e) {
                 System.out.println("ENEMY LABEL MOUSE RELEASED: button=" + e.getButton() + ", Enemy ID: " + EnemyWindow.this.hashCode());
+                
+                if (e.getButton() == MouseEvent.BUTTON1 && pressLocation != null) {
+                    long releaseTime = System.currentTimeMillis();
+                    long duration = releaseTime - pressTime;
+                    Point releaseLocation = e.getPoint();
+                    
+                    // Calculate distance moved
+                    double distance = pressLocation.distance(releaseLocation);
+                    
+                    System.out.println("ENEMY: Click analysis - Duration: " + duration + "ms, Distance: " + String.format("%.1f", distance) + "px, Enemy ID: " + EnemyWindow.this.hashCode());
+                    
+                    // Check if this qualifies as a click (short duration, small movement)
+                    if (duration <= CLICK_THRESHOLD_MS && distance <= CLICK_DISTANCE_THRESHOLD) {
+                        System.out.println("ENEMY: Valid click detected! Starting pain mode... - Enemy ID: " + EnemyWindow.this.hashCode());
+                        
+                        if (isEnemyPainActive) {
+                            System.out.println("ENEMY: Already in pain mode, ignoring click - ID: " + EnemyWindow.this.hashCode());
+                        } else {
+                            startEnemyPainAnimation();
+                        }
+                    } else {
+                        System.out.println("ENEMY: Invalid click - too long (" + duration + "ms) or too far (" + String.format("%.1f", distance) + "px) - Enemy ID: " + EnemyWindow.this.hashCode());
+                    }
+                    
+                    // Reset for next click
+                    pressLocation = null;
+                    pressTime = 0;
+                }
+            }
+            
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Keep this for debugging, but we're using press/release instead
+                System.out.println("ENEMY LABEL MOUSE CLICKED (fallback): button=" + e.getButton() + 
+                                   ", clickCount=" + e.getClickCount() + 
+                                   ", x=" + e.getX() + ", y=" + e.getY() + 
+                                   ", source=" + e.getSource().getClass().getName() +
+                                   ", Enemy ID: " + EnemyWindow.this.hashCode() +
+                                   ", isEnemyPainActive=" + isEnemyPainActive);
             }
         });
         
@@ -7288,35 +7350,8 @@ class EnemyWindow extends JWindow {
         
         setVisible(true);
         
-        // Add mouse listener for enemy click handling
-        addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                System.out.println("ENEMY CLICK DETECTED: button=" + e.getButton() + 
-                                   ", clickCount=" + e.getClickCount() + 
-                                   ", x=" + e.getX() + ", y=" + e.getY() + 
-                                   ", source=" + e.getSource().getClass().getName() +
-                                   ", Enemy ID: " + EnemyWindow.this.hashCode());
-                
-                // Only trigger pain mode on real left mouse button click
-                if (e.getButton() == MouseEvent.BUTTON1 && e.getClickCount() == 1) {
-                    System.out.println("ENEMY: Clicked by user! Starting pain mode...");
-                    startEnemyPainAnimation();
-                } else {
-                    System.out.println("ENEMY: Click ignored - not a left single click (button=" + e.getButton() + ", clicks=" + e.getClickCount() + ")");
-                }
-            }
-            
-            @Override
-            public void mousePressed(MouseEvent e) {
-                System.out.println("ENEMY MOUSE PRESSED: button=" + e.getButton() + ", Enemy ID: " + EnemyWindow.this.hashCode());
-            }
-            
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                System.out.println("ENEMY MOUSE RELEASED: button=" + e.getButton() + ", Enemy ID: " + EnemyWindow.this.hashCode());
-            }
-        });
+        // Mouse listener is only on the enemy label, not the window itself
+        // This prevents double-triggering of pain mode
         
         // Add window listener for proper cleanup
         addWindowListener(new WindowAdapter() {
@@ -7356,6 +7391,9 @@ class EnemyWindow extends JWindow {
     }
     
     private void startHorrorEffects() {
+        // Horror effects disabled to prevent confusion with pain effects
+        System.out.println("ENEMY: Horror effects disabled - ID: " + EnemyWindow.this.hashCode());
+        /*
         try {
             if (horrorEffectTimer != null) {
                 horrorEffectTimer.stop();
@@ -7364,7 +7402,7 @@ class EnemyWindow extends JWindow {
                 try {
                     // Don't create horror effects if enemy is in pain mode
                     if (!isEnemyPainActive) {
-                        createHorrorEffect();
+                    createHorrorEffect();
                     }
                     // Randomize next horror effect timing
                     if (horrorEffectTimer != null) {
@@ -7382,6 +7420,7 @@ class EnemyWindow extends JWindow {
         } catch (Exception e) {
             System.out.println("Error starting horror effect timer: " + e.getMessage());
         }
+        */
     }
     
     private void startAnimation() {
@@ -7467,15 +7506,14 @@ class EnemyWindow extends JWindow {
                     if (currentTime - lastCollisionTime > COLLISION_COOLDOWN_MS && targetPet.isVulnerableToPain()) {
                         System.out.println("COLLISION DETECTED! Distance: " + String.format("%.1f", distance) + 
                                          "px (threshold: " + distanceThreshold + "px), Enemy at (" + currentLocation.x + "," + currentLocation.y + 
-                                         "), Pet at (" + petLocation.x + "," + petLocation.y + ")");
+                                         "), Pet at (" + petLocation.x + "," + petLocation.y + ") - TRIGGERING PET PAIN ONLY");
                         targetPet.startPainAnimation();
                         lastCollisionTime = currentTime;
                     } else if (currentTime - lastCollisionTime <= COLLISION_COOLDOWN_MS) {
                         System.out.println("Collision ignored due to cooldown - Distance: " + String.format("%.1f", distance) + 
                                          "px (threshold: " + distanceThreshold + "px), Time since last collision: " + (currentTime - lastCollisionTime) + "ms");
                     } else if (!targetPet.isVulnerableToPain()) {
-                        System.out.println("Collision ignored - Pet is not vulnerable (in pain or power mode) - Distance: " + String.format("%.1f", distance) + 
-                                         "px (threshold: " + distanceThreshold + "px)");
+                        // Collision ignored silently - Pet is not vulnerable (in pain or power mode)
                     }
                 } else {
                     System.out.println("Close but no collision - Distance: " + String.format("%.1f", distance) + 
@@ -7560,22 +7598,19 @@ class EnemyWindow extends JWindow {
     }
     
     private void createHorrorEffect() {
-        int effectType = random.nextInt(5);
+        int effectType = random.nextInt(4); // Reduced from 5 to 4 since we removed disappear effect
         
         switch (effectType) {
-            case 0: // Disappear and reappear
-                disappearAndReappear();
-                break;
-            case 1: // Flicker effect
+            case 0: // Flicker effect
                 startFlicker();
                 break;
-            case 2: // Teleport jump scare
+            case 1: // Teleport jump scare
                 teleportJumpScare();
                 break;
-            case 3: // Change image
+            case 2: // Change image
                 changeEnemyImage();
                 break;
-            case 4: // Rapid animation horror
+            case 3: // Rapid animation horror
                 rapidAnimationHorror();
                 break;
         }
@@ -7935,7 +7970,7 @@ class EnemyWindow extends JWindow {
         }
         // Add debug info only when direction changes
         if (shouldFaceRight != enemyFacingRight) {
-            System.out.println("Enemy direction check - dx: " + dx + ", should face: " + (shouldFaceRight ? "RIGHT" : "LEFT") + ", currently facing: " + (enemyFacingRight ? "RIGHT" : "LEFT"));
+        System.out.println("Enemy direction check - dx: " + dx + ", should face: " + (shouldFaceRight ? "RIGHT" : "LEFT") + ", currently facing: " + (enemyFacingRight ? "RIGHT" : "LEFT"));
         }
     }
     
@@ -7970,15 +8005,69 @@ class EnemyWindow extends JWindow {
     private static final int ENEMY_MAX_PAIN_CYCLES = 3;
     private Timer enemyPainTimer;
     
+    // Enemy health system - track how many times enemy has been clicked
+    private int enemyHealth = ENEMY_MAX_HEALTH; // Use current max health setting
+    private static int ENEMY_MAX_HEALTH = 5; // Configurable max health (can be changed in settings)
+    
+    // Enemy death effect configuration
+    public static final String DEATH_EFFECT_FADE_SCALE = "Fade Out + Scale Down";
+    public static final String DEATH_EFFECT_PARTICLES = "Particle Burst";
+    public static final String DEATH_EFFECT_SCREEN_SHAKE = "Screen Shake";
+    private static String currentDeathEffect = DEATH_EFFECT_FADE_SCALE; // Default effect
+    
+    public static void setEnemyDeathEffect(String effect) {
+        currentDeathEffect = effect;
+        System.out.println("Enemy death effect changed to: " + effect);
+    }
+    
+    public static String getEnemyDeathEffect() {
+        return currentDeathEffect;
+    }
+    
+    /**
+     * Set the maximum health for all enemies
+     */
+    public static void setEnemyMaxHealth(int maxHealth) {
+        if (maxHealth > 0) {
+            ENEMY_MAX_HEALTH = maxHealth;
+            System.out.println("Enemy max health set to: " + ENEMY_MAX_HEALTH);
+        }
+    }
+    
+    /**
+     * Get the maximum health for enemies
+     */
+    public static int getEnemyMaxHealth() {
+        return ENEMY_MAX_HEALTH;
+    }
+    
     /**
      * Start enemy pain animation when clicked
      */
     private void startEnemyPainAnimation() {
-        System.out.println("ENEMY: startEnemyPainAnimation() called - ID: " + EnemyWindow.this.hashCode() + ", isEnemyPainActive: " + isEnemyPainActive);
+        System.out.println("ENEMY: startEnemyPainAnimation() called - ID: " + EnemyWindow.this.hashCode() + ", isEnemyPainActive: " + isEnemyPainActive + ", Health: " + enemyHealth + "/" + ENEMY_MAX_HEALTH);
         
+        // Double-check to prevent multiple pain animations
         if (isEnemyPainActive) {
-            System.out.println("ENEMY: Already in pain mode, ignoring click");
+            System.out.println("ENEMY: Already in pain mode, ignoring click - ID: " + EnemyWindow.this.hashCode());
             return;
+        }
+        
+        // Decrease enemy health when clicked
+        enemyHealth--;
+        System.out.println("ENEMY: Health decreased to " + enemyHealth + "/" + ENEMY_MAX_HEALTH + " - ID: " + EnemyWindow.this.hashCode());
+        
+        // Check if enemy should be removed (health reached 0)
+        if (enemyHealth <= 0) {
+            System.out.println("ENEMY: Health reached 0! Removing enemy - ID: " + EnemyWindow.this.hashCode());
+            removeEnemyFromGame();
+            return;
+        }
+        
+        // Additional safety check - if any pain timers are running, stop them first
+        if (enemyPainTimer != null && enemyPainTimer.isRunning()) {
+            System.out.println("ENEMY: Stopping existing pain timer before starting new one - ID: " + EnemyWindow.this.hashCode());
+            enemyPainTimer.stop();
         }
         
         System.out.println("ENEMY: Starting pain mode (3 cycles) - ID: " + EnemyWindow.this.hashCode());
@@ -8006,11 +8095,20 @@ class EnemyWindow extends JWindow {
         }
         
         enemyPainTimer = new Timer(500, e -> { // 500ms per cycle
+            // Safety check - if pain is no longer active, stop the timer
+            if (!isEnemyPainActive) {
+                System.out.println("ENEMY: Pain timer running but pain not active, stopping timer - ID: " + EnemyWindow.this.hashCode());
+                ((Timer) e.getSource()).stop();
+                return;
+            }
+            
             enemyPainCycleCount++;
+            System.out.println("ENEMY: Pain cycle " + enemyPainCycleCount + "/" + ENEMY_MAX_PAIN_CYCLES + " - ID: " + EnemyWindow.this.hashCode());
             
             if (enemyPainCycleCount >= ENEMY_MAX_PAIN_CYCLES) {
                 // Pain mode ended, restart normal behavior
                 System.out.println("ENEMY: Pain completed, returning to normal - ID: " + EnemyWindow.this.hashCode());
+                ((Timer) e.getSource()).stop();
                 stopEnemyPainAnimation();
             }
         });
@@ -8137,10 +8235,200 @@ class EnemyWindow extends JWindow {
     }
     
     /**
+     * Remove enemy from game when health reaches 0
+     */
+    private void removeEnemyFromGame() {
+        System.out.println("ENEMY: Removing enemy from game - ID: " + EnemyWindow.this.hashCode());
+        
+        // Stop all timers first
+        stopAllTimers();
+        
+        // Play death effect based on current setting
+        String deathEffect = getEnemyDeathEffect();
+        System.out.println("ENEMY: Playing death effect: " + deathEffect + " - ID: " + EnemyWindow.this.hashCode());
+        
+        if (deathEffect.equals(DEATH_EFFECT_FADE_SCALE)) {
+            playFadeScaleDeathEffect();
+        } else if (deathEffect.equals(DEATH_EFFECT_PARTICLES)) {
+            playParticleBurstDeathEffect();
+        } else if (deathEffect.equals(DEATH_EFFECT_SCREEN_SHAKE)) {
+            playScreenShakeDeathEffect();
+        }
+        
+        // Remove from parent pet's enemy list
+        if (targetPet != null) {
+            targetPet.getEnemies().remove(this);
+            System.out.println("ENEMY: Removed from parent pet's enemy list - ID: " + EnemyWindow.this.hashCode());
+        }
+        
+        // Switch back to normal music if no enemies remain
+        if (targetPet != null && targetPet.getEnemies().isEmpty() && musicEnabled) {
+            MusicManager.switchToNormalMusic();
+        }
+        
+        // Hide and dispose the window
+        setVisible(false);
+        dispose();
+        
+        System.out.println("ENEMY: Successfully removed from game - ID: " + EnemyWindow.this.hashCode());
+    }
+    
+    /**
+     * Play fade out + scale down death effect
+     */
+    private void playFadeScaleDeathEffect() {
+        System.out.println("ENEMY: Playing fade + scale death effect - ID: " + EnemyWindow.this.hashCode());
+        
+        Timer fadeTimer = new Timer(50, new ActionListener() {
+            private float alpha = 1.0f;
+            private float scale = 1.0f;
+            private int step = 0;
+            private final int totalSteps = 20;
+            
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                step++;
+                alpha = 1.0f - (float) step / totalSteps;
+                scale = 1.0f - (float) step / totalSteps * 0.5f; // Scale down to 50%
+                
+                // Apply transparency
+                setOpacity(alpha);
+                
+                // Apply scaling by resizing the window
+                int newWidth = (int) (enemyWidth * scale);
+                int newHeight = (int) (enemyHeight * scale);
+                setSize(newWidth, newHeight);
+                
+                // Center the shrinking window
+                Point currentLocation = getLocation();
+                int centerX = currentLocation.x + enemyWidth / 2;
+                int centerY = currentLocation.y + enemyHeight / 2;
+                setLocation(centerX - newWidth / 2, centerY - newHeight / 2);
+                
+                if (step >= totalSteps) {
+                    ((Timer) e.getSource()).stop();
+                }
+            }
+        });
+        fadeTimer.start();
+    }
+    
+    /**
+     * Play particle burst death effect
+     */
+    private void playParticleBurstDeathEffect() {
+        System.out.println("ENEMY: Playing particle burst death effect - ID: " + EnemyWindow.this.hashCode());
+        
+        // Create particle effect window
+        JWindow particleWindow = new JWindow();
+        particleWindow.setAlwaysOnTop(true);
+        particleWindow.setBackground(new Color(0, 0, 0, 0));
+        
+        // Create particles list
+        List<Particle> particles = new ArrayList<>();
+        Random random = new Random();
+        
+        // Create particles
+        for (int i = 0; i < 15; i++) {
+            particles.add(new Particle(
+                50, 50, // Center of 100x100 window
+                random.nextDouble() * 10 - 5, random.nextDouble() * 10 - 5,
+                new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256))
+            ));
+        }
+        
+        JPanel particlePanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Draw particles
+                for (Particle particle : particles) {
+                    g2d.setColor(particle.color);
+                    g2d.fillOval((int) particle.x, (int) particle.y, 4, 4);
+                }
+            }
+        };
+        
+        particleWindow.setContentPane(particlePanel);
+        particleWindow.setSize(100, 100);
+        particleWindow.setLocation(getLocation().x + enemyWidth / 2 - 50, getLocation().y + enemyHeight / 2 - 50);
+        particleWindow.setVisible(true);
+        
+        // Animate particles
+        Timer particleTimer = new Timer(50, new ActionListener() {
+            private int frame = 0;
+            private final int maxFrames = 30;
+            
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                frame++;
+                
+                // Update particles
+                for (Particle particle : particles) {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.vy += 0.2; // Gravity
+                    particle.color = new Color(
+                        particle.color.getRed(),
+                        particle.color.getGreen(),
+                        particle.color.getBlue(),
+                        Math.max(0, 255 - (frame * 255 / maxFrames))
+                    );
+                }
+                
+                particlePanel.repaint();
+                
+                if (frame >= maxFrames) {
+                    particleWindow.dispose();
+                    ((Timer) e.getSource()).stop();
+                }
+            }
+        });
+        particleTimer.start();
+    }
+    
+    /**
+     * Play screen shake death effect
+     */
+    private void playScreenShakeDeathEffect() {
+        System.out.println("ENEMY: Playing screen shake death effect - ID: " + EnemyWindow.this.hashCode());
+        
+        // Get all pets to shake their screens
+        List<AdvancedDesktopPet> allPets = AdvancedDesktopPet.getAllPets();
+        for (AdvancedDesktopPet pet : allPets) {
+            pet.createHorrorShake();
+        }
+    }
+    
+    /**
+     * Simple particle class for burst effect
+     */
+    private static class Particle {
+        double x, y, vx, vy;
+        Color color;
+        
+        Particle(double x, double y, double vx, double vy, Color color) {
+            this.x = x;
+            this.y = y;
+            this.vx = vx;
+            this.vy = vy;
+            this.color = color;
+        }
+    }
+    
+    /**
      * Stop enemy pain animation and return to normal
      */
     private void stopEnemyPainAnimation() {
-        if (!isEnemyPainActive) return;
+        System.out.println("ENEMY: stopEnemyPainAnimation() called - ID: " + EnemyWindow.this.hashCode() + ", isEnemyPainActive: " + isEnemyPainActive);
+        
+        if (!isEnemyPainActive) {
+            System.out.println("ENEMY: Not in pain mode, nothing to stop - ID: " + EnemyWindow.this.hashCode());
+            return;
+        }
         
         System.out.println("ENEMY: Pain mode ended, returning to normal - ID: " + EnemyWindow.this.hashCode());
         isEnemyPainActive = false;

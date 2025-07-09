@@ -47,6 +47,8 @@ target/
 build/
 out/
 bin/
+portable-jre/
+DesktopPet-Portable-EXE/
 
 # Temporary files
 *.tmp
