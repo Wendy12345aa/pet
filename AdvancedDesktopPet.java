@@ -8165,7 +8165,16 @@ class EnemyWindow extends JWindow {
                 if (frameIndex < frames.size()) {
                     AnimationFrame currentFrame = frames.get(frameIndex);
                     if (currentFrame != null) {
-                        currentEnemyImage = currentFrame.getImage();
+                        // Scale the pain frame to match current enemy size
+                        ImageIcon originalPainImage = currentFrame.getOriginalImage();
+                        if (originalPainImage != null && originalPainImage.getImage() != null) {
+                            Image scaledPainImage = originalPainImage.getImage().getScaledInstance(
+                                enemyWidth, enemyHeight, Image.SCALE_SMOOTH);
+                            currentEnemyImage = new ImageIcon(scaledPainImage);
+                        } else {
+                            // Fallback to the scaled image if original is not available
+                            currentEnemyImage = currentFrame.getImage();
+                        }
                         updateEnemySprite();
                     }
                 }
