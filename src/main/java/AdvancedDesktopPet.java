@@ -3,7 +3,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,9 +12,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.Dictionary;
-import javax.swing.UnsupportedLookAndFeelException;
-import javax.sound.sampled.*;
-import java.net.URL;
+
 
 public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseMotionListener {
     private static final int DEFAULT_WIDTH = 128;
@@ -138,7 +135,8 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
         allPets.add(this); // Register this pet
         MusicManager.updatePetList(allPets); // Update music manager
         
-
+        // Set application icon
+        setApplicationIcon();
         
         // Load resources asynchronously
         SwingUtilities.invokeLater(() -> {
@@ -267,6 +265,30 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
             loadingWindow.setVisible(false);
             loadingWindow.dispose();
             loadingWindow = null;
+        }
+    }
+    
+    /**
+     * Set the application icon using chibi01.ico
+     */
+    private void setApplicationIcon() {
+        try {
+            // Try to load the icon from the root directory first
+            File iconFile = new File("chibi01.ico");
+            if (!iconFile.exists()) {
+                // If not in root, try the Image directory
+                iconFile = new File("Image/chibi01.ico");
+            }
+            
+            if (iconFile.exists()) {
+                ImageIcon icon = new ImageIcon(iconFile.getAbsolutePath());
+                setIconImage(icon.getImage());
+                System.out.println("Application icon set successfully: " + iconFile.getAbsolutePath());
+            } else {
+                System.out.println("Warning: chibi01.ico not found. Application will use default icon.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error setting application icon: " + e.getMessage());
         }
     }
     
@@ -5730,9 +5752,9 @@ class CharacterSetComboRenderer extends DefaultListCellRenderer {
  * Dedicated window for importing and managing character sets
  */
 class CharacterImportWindow extends JFrame {
-    private static final int WINDOW_WIDTH = 800;
-    private static final int WINDOW_HEIGHT = 600;
-    private static final int PREVIEW_SIZE = 150;
+    private static final int WINDOW_WIDTH = 1200;  // Increased from 800
+    private static final int WINDOW_HEIGHT = 800;  // Increased from 600
+    private static final int PREVIEW_SIZE = 200;   // Increased from 150
     
     private CharacterSetManager characterSetManager;
     private CharacterSet currentWorkingSet;
@@ -5785,6 +5807,9 @@ class CharacterImportWindow extends JFrame {
         
         // Create new empty set by default
         createNewCharacterSet();
+        
+        // Set window to maximized state by default
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         
         System.out.println("Character Import Window initialized");
         
@@ -5847,23 +5872,33 @@ class CharacterImportWindow extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
         panel.setBorder(BorderFactory.createTitledBorder(getText("character_set_info")));
         
+        // Add some padding around the panel
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createEmptyBorder(10, 10, 10, 10),
+            panel.getBorder()
+        ));
+        
         // Set type selection
         gbc.gridx = 0; gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(5, 5, 5, 10);  // Add spacing
         panel.add(new JLabel(getText("type")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
+        gbc.insets = new Insets(5, 0, 5, 5);   // Add spacing
         setTypeCombo = new JComboBox<>(new String[]{getText("pet_character"), getText("enemy_character")});
         panel.add(setTypeCombo, gbc);
         
         // Existing sets
         gbc.gridx = 0; gbc.gridy = 1;
         gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        gbc.insets = new Insets(5, 5, 5, 10);  // Add spacing
         panel.add(new JLabel(getText("existing_sets")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
+        gbc.insets = new Insets(5, 0, 5, 5);   // Add spacing
         existingSetCombo = new JComboBox<>();
         existingSetCombo.setEditable(false);
         existingSetCombo.setRenderer(new CharacterSetComboRenderer());
@@ -5872,20 +5907,24 @@ class CharacterImportWindow extends JFrame {
         // Set name
         gbc.gridx = 0; gbc.gridy = 2;
         gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        gbc.insets = new Insets(5, 5, 5, 10);  // Add spacing
         panel.add(new JLabel(getText("set_name")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
+        gbc.insets = new Insets(5, 0, 5, 5);   // Add spacing
         setNameField = new JTextField();
         panel.add(setNameField, gbc);
         
         // Author
         gbc.gridx = 0; gbc.gridy = 3;
         gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
+        gbc.insets = new Insets(5, 5, 5, 10);  // Add spacing
         panel.add(new JLabel(getText("author")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
+        gbc.insets = new Insets(5, 0, 5, 5);   // Add spacing
         authorField = new JTextField();
         panel.add(authorField, gbc);
         
@@ -5893,10 +5932,12 @@ class CharacterImportWindow extends JFrame {
         gbc.gridx = 0; gbc.gridy = 4;
         gbc.weightx = 0.0; gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.insets = new Insets(5, 5, 5, 10);  // Add spacing
         panel.add(new JLabel(getText("description")), gbc);
         
         gbc.gridx = 1; gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 1.0; gbc.weighty = 1.0;
-        descriptionArea = new JTextArea(3, 20);
+        gbc.insets = new Insets(5, 0, 5, 5);   // Add spacing
+        descriptionArea = new JTextArea(4, 30);  // Increased rows and columns
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
         JScrollPane descScrollPane = new JScrollPane(descriptionArea);
@@ -5906,7 +5947,7 @@ class CharacterImportWindow extends JFrame {
     }
     
     private JPanel createContentPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout(15, 0));  // Added horizontal gap between panels
         
         // Create left panel for animations
         JPanel leftPanel = createAnimationPanel();
@@ -5920,8 +5961,14 @@ class CharacterImportWindow extends JFrame {
     }
     
     private JPanel createAnimationPanel() {
-        JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
+        JPanel panel = new JPanel(new GridLayout(2, 2, 20, 20));  // Increased gaps from 10 to 20
         panel.setBorder(BorderFactory.createTitledBorder(getText("animation_import")));
+        
+        // Add padding around the panel
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createEmptyBorder(10, 10, 10, 10),
+            panel.getBorder()
+        ));
         
         // Create animation import panels
         idlePanel = new AnimationImportPanel(getText("idle_animation"), true);
@@ -5940,7 +5987,13 @@ class CharacterImportWindow extends JFrame {
     private JPanel createPreviewPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createTitledBorder(getText("preview")));
-        panel.setPreferredSize(new Dimension(200, 0));
+        panel.setPreferredSize(new Dimension(280, 0));  // Increased from 200 to 280
+        
+        // Add padding around the panel
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createEmptyBorder(10, 10, 10, 10),
+            panel.getBorder()
+        ));
         
         // Preview display
         previewPanel = new JPanel(new BorderLayout());
@@ -5955,7 +6008,7 @@ class CharacterImportWindow extends JFrame {
         panel.add(previewPanel, BorderLayout.NORTH);
         
         // Preview controls
-        JPanel controlPanel = new JPanel(new GridLayout(5, 1, 5, 5));
+        JPanel controlPanel = new JPanel(new GridLayout(5, 1, 8, 8));  // Increased gaps from 5 to 8
         controlPanel.setBorder(BorderFactory.createTitledBorder(getText("preview_controls")));
         
         JButton previewIdleBtn = new JButton(getText("preview_idle"));
@@ -5963,6 +6016,20 @@ class CharacterImportWindow extends JFrame {
         JButton previewSpecialBtn = new JButton(getText("preview_special"));
         JButton previewPainBtn = new JButton(getText("preview_pain"));
         JButton stopPreviewBtn = new JButton(getText("stop_preview"));
+        
+        // Style all preview buttons to look more substantial
+        JButton[] previewButtons = {previewIdleBtn, previewWalkBtn, previewSpecialBtn, previewPainBtn, stopPreviewBtn};
+        for (JButton button : previewButtons) {
+            button.setPreferredSize(new Dimension(120, 35));  // Set minimum size
+            button.setMinimumSize(new Dimension(120, 35));
+            button.setFont(button.getFont().deriveFont(Font.BOLD, 12f));  // Make font bold and slightly larger
+            button.setFocusPainted(false);  // Remove focus border for cleaner look
+        }
+        
+        // Make stop button stand out
+        stopPreviewBtn.setBackground(new Color(220, 100, 100));  // Light red background
+        stopPreviewBtn.setForeground(Color.WHITE);
+        stopPreviewBtn.setOpaque(true);
         
         controlPanel.add(previewIdleBtn);
         controlPanel.add(previewWalkBtn);
@@ -5983,7 +6050,7 @@ class CharacterImportWindow extends JFrame {
     }
     
     private JPanel createFooterPanel() {
-        JPanel panel = new JPanel(new FlowLayout());
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));  // Added gaps between buttons
         
         importButton = new JButton(getText("import_images"));
         exportButton = new JButton(getText("export_set"));
@@ -6936,16 +7003,16 @@ class AnimationImportPanel extends JPanel {
         setBorder(BorderFactory.createTitledBorder(animationName + (isLooping ? " (Loop)" : " (Once)")));
         
         // Create image panel
-        imagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        imagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));  // Added gaps between thumbnails
         scrollPane = new JScrollPane(imagePanel);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-        scrollPane.setPreferredSize(new Dimension(0, 100));
+        scrollPane.setPreferredSize(new Dimension(0, 140));  // Increased height from 100 to 140
         
         add(scrollPane, BorderLayout.CENTER);
         
         // Add button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));  // Added gaps between buttons
         JButton addButton = new JButton("Add Images");
         JButton clearButton = new JButton("Clear");
         JButton flipButton = new JButton("Flip All");
@@ -6989,7 +7056,7 @@ class AnimationImportPanel extends JPanel {
         // Create thumbnail for display
         JLabel thumbnail = new JLabel(image);
         thumbnail.setBorder(BorderFactory.createRaisedBevelBorder());
-        thumbnail.setPreferredSize(new Dimension(80, 80));
+        thumbnail.setPreferredSize(new Dimension(90, 90));  // Increased from 80x80 to 90x90
         
         // Add remove functionality
         thumbnail.addMouseListener(new MouseAdapter() {
@@ -7069,7 +7136,7 @@ class AnimationImportPanel extends JPanel {
             for (ImageIcon flippedImage : flippedImages) {
                 JLabel thumbnail = new JLabel(flippedImage);
                 thumbnail.setBorder(BorderFactory.createRaisedBevelBorder());
-                thumbnail.setPreferredSize(new Dimension(80, 80));
+                thumbnail.setPreferredSize(new Dimension(90, 90));  // Increased from 80x80 to 90x90
                 
                 // Add remove functionality
                 thumbnail.addMouseListener(new MouseAdapter() {
@@ -7240,8 +7307,8 @@ class EnemyWindow extends JWindow {
         this.enemyImages = images;
         
         // Get size and transparency from target pet
-        this.enemyWidth = pet.petWidth;
-        this.enemyHeight = pet.petHeight;
+        this.enemyWidth = pet.enemyWidth;  // Use enemy size, not pet size
+        this.enemyHeight = pet.enemyHeight; // Use enemy size, not pet size
         this.enemyTransparency = pet.transparency;
         
         initializeEnemy();
