@@ -18,6 +18,7 @@
 *.zip
 *.tar.gz
 *.rar
+*.exe
 
 # Virtual machine crash logs
 hs_err_pid*
@@ -48,7 +49,7 @@ build/
 out/
 bin/
 portable-jre/
-DesktopPet-Portable-EXE/
+DesktopPet-EXE/
 
 # Temporary files
 *.tmp
@@ -63,3 +64,4 @@ DesktopPet-Portable-EXE/
 
 # Keep the JAR file for distribution but exclude other build artifacts
 # AdvancedDesktopPet.jar 
+create_final_exe.bat
