@@ -1,144 +1,236 @@
-# Java Desktop Pet (桌宠)
+# 🐾 Desktop Pet (桌宠) - Interactive Desktop Companion
 
-A cute desktop pet application built with Java Swing that lives on your desktop and interacts with you!
+[![Java](https://img.shields.io/badge/Java-8+-orange.svg)](https://www.oracle.com/java/)
+[![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-2.0-purple.svg)](https://github.com/yourusername/pet/releases)
 
-## 🚀 **Quick Start**
+<div align="center">
+  <img src="Image/chibi01.png" alt="Desktop Pet" width="200"/>
+  <br/>
+  <em>Your cute companion that lives on your desktop! 🎮</em>
+</div>
 
-**For Development:**
-```batch
-run_enhanced.bat    # Compile and run with error handling
+---
+
+## 🌟 Features / 功能特色
+
+### ✨ Core Features / 核心功能
+- 🎭 **Transparent Windows** / 透明窗口 - Seamless desktop integration
+- 🎮 **Interactive Animations** / 互动动画 - Idle, walking, and special animations
+- 🖱️ **Mouse Interactions** / 鼠标交互 - Drag, click, and control your pet
+- 🎵 **Music System** / 音乐系统 - Background music and sound effects
+- 👹 **Enemy System** / 敌人系统 - Horror mode with chasing enemies
+- 🌍 **Multi-language** / 多语言 - English and Chinese support
+- 🎨 **Character Import** / 角色导入 - Import custom characters and animations
+
+### 🎯 Advanced Features / 高级功能
+- 📱 **System Tray** / 系统托盘 - Control from system tray
+- 🖥️ **Multi-screen** / 多屏幕 - Cross-screen movement support
+- ⚙️ **Settings Panel** / 设置面板 - Comprehensive configuration options
+- 🎪 **Floating Shortcut** / 浮动快捷方式 - Quick access controls
+- 🔄 **Real-time Updates** / 实时更新 - Dynamic behavior changes
+
+---
+
+## 🚀 Quick Start / 快速开始
+
+### For Development / 开发环境
+```bash
+# Clone the repository / 克隆仓库
+git clone https://github.com/yourusername/pet.git
+cd pet
+
+# Run with enhanced launcher / 使用增强启动器运行
+run_enhanced.bat
 ```
 
-Or manually:
-```batch
-javac AdvancedDesktopPet.java MusicManager.java
-java AdvancedDesktopPet
+### For End Users / 最终用户
+```bash
+# Download the portable package / 下载便携包
+# Extract and run DesktopPet.exe / 解压并运行 DesktopPet.exe
 ```
 
-**For Portable Package Creation:**
-```batch
-create_jar.bat              # Step 1: Create JAR
-create_simple_launcher.bat   # Step 2: Create portable launcher
+---
+
+## 🎮 Controls / 操作控制
+
+| Action / 操作 | Control / 控制 | Description / 说明 |
+|---------------|----------------|-------------------|
+| **Move Pet** / 移动宠物 | Left-click + Drag / 左键拖拽 | Drag your pet around the screen |
+| **Jump** / 跳跃 | Double-click / 双击 | Make your pet jump |
+| **Settings** / 设置 | Middle-click / 中键 | Open settings menu |
+| **Special Animation** / 特殊动画 | Right-click / 右键 | Trigger special animations |
+| **System Tray** / 系统托盘 | Right-click tray icon / 右键托盘图标 | Show/hide/exit options |
+
+---
+
+## 📦 Installation Options / 安装选项
+
+### 🎯 Development Setup / 开发环境
+```bash
+# Requirements / 要求
+- Java 8+ (JDK recommended)
+- Windows OS
+
+# Quick Run / 快速运行
+run_enhanced.bat
 ```
 
-**For Complete Portable Package:**
-```batch
-create_final_exe.bat         # Complete workflow (JAR + JRE + Launcher)
+### 📱 Portable Package / 便携包
+```bash
+# Complete Package / 完整包
+create_final_exe.bat
+
+# Features / 特点
+- No Java installation required
+- Self-contained executable
+- ~80MB total size
+- Ready to run anywhere
 ```
 
-📖 **See [STREAMLINED_WORKFLOW.md](STREAMLINED_WORKFLOW.md) for complete instructions**
+---
 
-## Features ✅
-
-- **透明窗口 (Transparent Window)**: Fully transparent background
-- **窗口置顶 (Always On Top)**: Pet stays on top of other windows
-- **无边框 (Borderless)**: Clean, frameless window
-- **动画显示 (Animations)**: Smooth idle and walking animations
-- **鼠标交互 (Mouse Interactions)**:
-  - Drag the pet around your screen
-  - Double-click to make it jump
-  - Middle-click for settings menu
-  - Right-click for special animations
-- **托盘图标 (System Tray)**: Control pet from system tray
-- **自动移动 (Auto Movement)**: Pet randomly walks around the screen
-- **敌人系统 (Enemy System)**: Horror mode with enemy pets
-- **音乐系统 (Music System)**: Background music and sound effects
-- **多语言支持 (Multi-language)**: English and Chinese support
-
-## 🎯 **Controls**
-
-- **Left-click + Drag**: Move the pet around
-- **Double-click**: Make the pet jump
-- **Middle-click**: Open settings menu
-- **Right-click**: Trigger special animations
-- **System Tray**: Right-click tray icon for show/hide/exit
-
-## 📦 **Deployment Options**
-
-| Option | Command | Size | Portability |
-|--------|---------|------|-------------|
-| **JAR Only** | `create_jar.bat` | ~42MB | Requires Java |
-| **Portable Package** | `create_simple_launcher.bat` | ~80MB | No Java needed |
-| **Complete Package** | `create_final_exe.bat` | ~80MB | No Java needed |
-
-## 🛠️ **Requirements**
-
-- **For Development**: Java 8+ (JDK recommended)
-- **For Portable Package Creation**: Java 11+ (JDK with jlink)
-- **For End Users**: None (if using portable package)
-
-## 📁 **Project Structure**
+## 🏗️ Project Structure / 项目结构
 
 ```
 pet/
-├── AdvancedDesktopPet.java     # Main application
-├── MusicManager.java           # Music system (required)
-├── Image/                      # Pet sprites and assets
-│   ├── chibi01.png             # Main pet character
-│   ├── chibi02.png             # Alternative pet character
-│   ├── chibi03.png             # Alternative pet character
-│   ├── enemy01.png             # Enemy character
-│   ├── enemy02.png             # Enemy character
-│   ├── enemy03.png             # Enemy character
-│   └── chibi01.ico             # Application icon
-├── music/                      # Audio files
-│   ├── normal.wav              # Normal background music
-│   └── horror.wav              # Horror mode music
-├── DesktopPet-Portable-EXE/    # Final portable package
-│   ├── DesktopPet.bat          # Launcher (no Java needed)
-│   ├── jre/                    # Embedded Java runtime
-│   ├── lib/AdvancedDesktopPet.jar # Application
-│   ├── resources/Image/        # All image files
-│   ├── resources/music/        # All music files
-│   └── chibi01.ico             # Application icon
-├── run.bat                     # Basic development launcher
-├── run_enhanced.bat            # Enhanced development launcher
-├── create_jar.bat              # JAR creation
-├── create_simple_launcher.bat  # Portable launcher creation
-├── create_final_exe.bat        # Complete package creation
-├── diagnose_java.bat           # Java troubleshooting
-├── cleanup.bat                 # Clean up temp files
-└── STREAMLINED_WORKFLOW.md     # Complete guide
+├── 📁 src/main/java/           # Source code / 源代码
+│   ├── AdvancedDesktopPet.java # Main application / 主程序
+│   ├── MusicManager.java       # Music system / 音乐系统
+│   └── LocationUtils.java      # Utility functions / 工具函数
+├── 📁 resources/               # Game resources / 游戏资源
+│   ├── CharacterSets/          # Character animations / 角色动画
+│   │   ├── Pets/              # Pet characters / 宠物角色
+│   │   └── Enemies/           # Enemy characters / 敌人角色
+│   └── music/                 # Audio files / 音频文件
+├── 📁 Image/                   # Image assets / 图像资源
+├── 📁 scripts/                 # Build scripts / 构建脚本
+├── 📁 docs/                    # Documentation / 文档
+└── 📁 target/                  # Build output / 构建输出
 ```
 
-## 🔧 **Troubleshooting**
+---
 
-If you encounter issues:
-```batch
-diagnose_java.bat    # Check Java installation
-cleanup.bat          # Clean up .class files and temp artifacts
+## 🎨 Customization / 自定义
+
+### 🎭 Adding Custom Characters / 添加自定义角色
+1. **Prepare Images** / 准备图像
+   - Create animation frames / 创建动画帧
+   - Organize by behavior / 按行为分类
+   - Use PNG format / 使用PNG格式
+
+2. **Import Process** / 导入过程
+   - Open Character Import Window / 打开角色导入窗口
+   - Select animation folders / 选择动画文件夹
+   - Configure metadata / 配置元数据
+   - Save character set / 保存角色集
+
+### 🎵 Custom Music / 自定义音乐
+- Supported formats: WAV, MP3 / 支持格式：WAV, MP3
+- Place in `music/` folder / 放置在 `music/` 文件夹
+- Configure in settings / 在设置中配置
+
+---
+
+## 🛠️ Development / 开发
+
+### 🔧 Building from Source / 从源码构建
+```bash
+# Compile / 编译
+javac -d target src/main/java/*.java
+
+# Run / 运行
+java -cp target AdvancedDesktopPet
 ```
 
-Common solutions:
-- Install Java from [adoptium.net](https://adoptium.net/)
-- Use JDK (not JRE) for development
-- Ensure you have Java 11+ for portable package creation
+### 🧪 Testing / 测试
+```bash
+# Run tests / 运行测试
+scripts/run/run_tests.bat
 
-## 🎨 **Customization**
+# Test specific features / 测试特定功能
+scripts/run/run_enhanced.bat
+```
 
-You can customize the pet by:
-1. **Replace Images**: Update files in `Image/` folder
-2. **Add Music**: Add audio files to `music/` folder
-3. **Modify Behavior**: Edit `AdvancedDesktopPet.java` and `MusicManager.java`
-4. **Change Size**: Use settings menu or modify constants
+### 📦 Creating Packages / 创建包
+```bash
+# JAR only / 仅JAR
+create_jar.bat
 
-## 📦 **Distribution**
+# Portable package / 便携包
+create_simple_launcher.bat
 
-The `DesktopPet-Portable-EXE` folder contains everything needed:
-- **DesktopPet.bat** - Launcher (works without Java installation)
-- **jre/** - Embedded Java runtime
-- **lib/AdvancedDesktopPet.jar** - Your application
-- **resources/Image/** - All character images
-- **resources/music/** - All music files
-- **chibi01.ico** - Application icon
+# Complete package / 完整包
+create_final_exe.bat
+```
 
-Users can simply:
-1. Extract the folder anywhere
-2. Double-click `DesktopPet.bat`
-3. No Java installation required!
+---
 
-## 📚 **Documentation**
+## 🐛 Troubleshooting / 故障排除
 
-- **[STREAMLINED_WORKFLOW.md](STREAMLINED_WORKFLOW.md)** - Complete development and deployment guide
+### Common Issues / 常见问题
 
-Enjoy your new desktop companion! 🐾 
+| Issue / 问题 | Solution / 解决方案 |
+|--------------|-------------------|
+| **Pet not visible** / 宠物不可见 | Check transparency settings / 检查透明度设置 |
+| **Music not playing** / 音乐不播放 | Verify audio files in music/ folder / 验证music/文件夹中的音频文件 |
+| **Enemies not spawning** / 敌人不生成 | Enable enemy system in settings / 在设置中启用敌人系统 |
+| **Import window crashes** / 导入窗口崩溃 | Check image format and size / 检查图像格式和大小 |
+
+### 🔍 Debug Mode / 调试模式
+- Press `S` key to open settings / 按 `S` 键打开设置
+- Check console output for errors / 检查控制台错误输出
+- Verify file paths and permissions / 验证文件路径和权限
+
+---
+
+## 🤝 Contributing / 贡献
+
+We welcome contributions! / 欢迎贡献！
+
+### 📝 How to Contribute / 如何贡献
+1. **Fork the repository** / Fork 仓库
+2. **Create a feature branch** / 创建功能分支
+3. **Make your changes** / 进行更改
+4. **Test thoroughly** / 充分测试
+5. **Submit a pull request** / 提交拉取请求
+
+### 🎨 Contribution Areas / 贡献领域
+- 🎭 **New Characters** / 新角色
+- 🎵 **Music and Sound Effects** / 音乐和音效
+- 🐛 **Bug Fixes** / 错误修复
+- 📚 **Documentation** / 文档
+- 🌍 **Translations** / 翻译
+
+---
+
+## 📄 License / 许可证
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+本项目采用 MIT 许可证 - 详情请参阅 [LICENSE](LICENSE) 文件。
+
+---
+
+## 🙏 Acknowledgments / 致谢
+
+- **Java Swing** - GUI framework / GUI框架
+- **OpenJDK** - Java runtime / Java运行时
+- **Contributors** - Community support / 社区支持
+
+---
+
+## 📞 Support / 支持
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/pet/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/pet/discussions)
+- **Wiki**: [Project Wiki](https://github.com/yourusername/pet/wiki)
+
+---
+
+<div align="center">
+  <strong>Made with ❤️ for the desktop pet community</strong>
+  <br/>
+  <em>为桌面宠物社区而制作 ❤️</em>
+</div> 
