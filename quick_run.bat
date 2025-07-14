@@ -1,12 +1,17 @@
 @echo off
-echo ========================================
-echo Desktop Pet - Quick Runner (Root)
-echo ========================================
+setlocal
+
+REM ========================================
+REM Desktop Pet - Quick Runner (Root)
+REM ========================================
 echo.
 
-echo Compiling from organized source directory...
+REM Create build output directory if it doesn't exist
+if not exist ..\..\..\target mkdir ..\..\..\target
+
+REM Compile all Java files to target directory
 cd src\main\java
-javac AdvancedDesktopPet.java MusicManager.java LocationUtils.java
+javac -d ..\..\..\target AdvancedDesktopPet.java MusicManager.java LocationUtils.java
 
 if errorlevel 1 (
     echo ❌ Compilation failed!
@@ -20,8 +25,9 @@ echo.
 echo Running from root directory (where Image/, music/, resources/ are accessible)...
 cd ..\..\..
 
-java -cp "src\main\java" AdvancedDesktopPet
+java -cp target AdvancedDesktopPet
 
 echo.
 echo Pet closed.
-pause 
+pause
+endlocal 
