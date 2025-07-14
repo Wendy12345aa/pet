@@ -1,17 +1,31 @@
-# Java build artifacts
+# Compiled class files
 *.class
+
+# Log files
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files
 *.jar
 *.war
+*.nar
 *.ear
+*.zip
+*.tar.gz
+*.rar
+*.exe
 
-# Build output directories
-/target/
-/bin/
-/build/
-/out/
+# Virtual machine crash logs
+hs_err_pid*
+replay_pid*
 
-# IDE and editor files
-/.idea/
+# IDE files
+.idea/
 *.iml
 *.ipr
 *.iws
@@ -19,10 +33,6 @@
 *.swp
 *.swo
 *~
-
-# Log files
-*.log
-logs/
 
 # OS generated files
 .DS_Store
@@ -33,56 +43,25 @@ logs/
 ehthumbs.db
 Thumbs.db
 
-# Deployment and executable files
-*.exe
-*.zip
-*.tar.gz
-*.rar
-DesktopPet-EXE/
+# Build directories
+target/
+build/
+out/
+bin/
 portable-jre/
-DesktopPet-EXE.zip
-DesktopPet.exe
-
-# Portable JRE (large runtime files)
-/portable-jre/
-/DesktopPet-Portable-EXE/
+DesktopPet-EXE/
 
 # Temporary files
 *.tmp
 *.temp
-temp_launcher.cpp
-temp_launcher.exe
-temp_launcher.rc
 
 # Backup files
 *.bak
 *.backup
-*~
 
-# Compiled resource files
-*.rc
-*.res
+# JRE files (if you want to exclude the portable JRE)
+# portable-jre/
 
-# Windows specific
-*.lnk
-desktop.ini
-
-# Java specific
-*.hprof
-hs_err_pid*
-
-# Maven (if used)
-.mvn/
-mvnw
-mvnw.cmd
-
-# Gradle (if used)
-.gradle/
-gradlew
-gradlew.bat
-
-# Package files
-*.msi
-*.deb
-*.rpm
-*.dmg
+# Keep the JAR file for distribution but exclude other build artifacts
+# AdvancedDesktopPet.jar 
+create_final_exe.bat
