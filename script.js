@@ -283,6 +283,127 @@ rippleStyle.textContent = `
 `;
 document.head.appendChild(rippleStyle);
 
+// Floating Character Animation and Interaction
+document.addEventListener('DOMContentLoaded', function() {
+    const floatingCharacter = document.getElementById('floatingCharacter');
+    const characterImg = floatingCharacter.querySelector('.character-img');
+    
+    if (floatingCharacter) {
+        // Make character interactive
+        floatingCharacter.classList.add('interactive');
+        
+        // Character click interaction
+        floatingCharacter.addEventListener('click', function() {
+            // Create explosion effect
+            createExplosion(this);
+            
+            // Change character image randomly
+            const characters = ['Image/chibi01.png', 'Image/chibi02.png', 'Image/chibi03.png'];
+            const randomChar = characters[Math.floor(Math.random() * characters.length)];
+            characterImg.src = randomChar;
+            
+            // Add glitch effect
+            this.style.animation = 'glitchText 0.3s ease-in-out';
+            setTimeout(() => {
+                this.style.animation = 'floatAround 20s linear infinite';
+            }, 300);
+        });
+        
+        // Mouse follow effect (subtle)
+        document.addEventListener('mousemove', function(e) {
+            const charRect = floatingCharacter.getBoundingClientRect();
+            const charCenterX = charRect.left + charRect.width / 2;
+            const charCenterY = charRect.top + charRect.height / 2;
+            
+            const distance = Math.sqrt(
+                Math.pow(e.clientX - charCenterX, 2) + 
+                Math.pow(e.clientY - charCenterY, 2)
+            );
+            
+            if (distance < 100) {
+                floatingCharacter.style.transform = 'scale(1.1)';
+                floatingCharacter.style.filter = 'drop-shadow(0 0 25px #ffff00)';
+            } else {
+                floatingCharacter.style.transform = '';
+                floatingCharacter.style.filter = '';
+            }
+        });
+        
+        // Random character changes
+        setInterval(() => {
+            if (Math.random() < 0.1) { // 10% chance every interval
+                const characters = ['Image/chibi01.png', 'Image/chibi02.png', 'Image/chibi03.png'];
+                const randomChar = characters[Math.floor(Math.random() * characters.length)];
+                characterImg.src = randomChar;
+                
+                // Add a small glow effect
+                floatingCharacter.style.filter = 'drop-shadow(0 0 30px #ff00ff)';
+                setTimeout(() => {
+                    floatingCharacter.style.filter = '';
+                }, 500);
+            }
+        }, 5000); // Check every 5 seconds
+    }
+});
+
+// Create explosion effect for character interaction
+function createExplosion(element) {
+    const rect = element.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div');
+        const angle = (i / 12) * Math.PI * 2;
+        const distance = 50 + Math.random() * 30;
+        const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        particle.style.cssText = `
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            background: ${randomColor};
+            border-radius: 50%;
+            left: ${centerX}px;
+            top: ${centerY}px;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 0 15px ${randomColor};
+            animation: explosionParticle 1s ease-out forwards;
+        `;
+        
+        document.body.appendChild(particle);
+        
+        // Animate particle movement
+        setTimeout(() => {
+            const endX = centerX + Math.cos(angle) * distance;
+            const endY = centerY + Math.sin(angle) * distance;
+            particle.style.transform = `translate(${endX - centerX}px, ${endY - centerY}px)`;
+        }, 10);
+        
+        setTimeout(() => {
+            particle.remove();
+        }, 1000);
+    }
+}
+
+// Add explosion animation
+const explosionStyle = document.createElement('style');
+explosionStyle.textContent = `
+    @keyframes explosionParticle {
+        0% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(0);
+        }
+    }
+`;
+document.head.appendChild(explosionStyle);
+
 // Add CSS for cyberpunk animations
 const style = document.createElement('style');
 style.textContent = `

@@ -935,4 +935,123 @@ img {
 
 @keyframes fadeIn {
     to { opacity: 1; }
+}
+
+/* Animated Floating Character */
+.floating-character {
+    position: fixed;
+    width: 80px;
+    height: 80px;
+    z-index: 999;
+    pointer-events: none;
+    transition: all 0.5s ease;
+    animation: floatAround 20s linear infinite;
+}
+
+.character-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 15px #00ffff);
+    animation: characterGlow 3s ease-in-out infinite alternate;
+}
+
+.character-trail {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: trailPulse 2s ease-in-out infinite;
+}
+
+@keyframes floatAround {
+    0% {
+        top: 10%;
+        left: 10%;
+        transform: rotate(0deg) scale(1);
+    }
+    25% {
+        top: 20%;
+        left: 80%;
+        transform: rotate(90deg) scale(1.1);
+    }
+    50% {
+        top: 70%;
+        left: 70%;
+        transform: rotate(180deg) scale(0.9);
+    }
+    75% {
+        top: 80%;
+        left: 20%;
+        transform: rotate(270deg) scale(1.05);
+    }
+    100% {
+        top: 10%;
+        left: 10%;
+        transform: rotate(360deg) scale(1);
+    }
+}
+
+@keyframes characterGlow {
+    0% {
+        filter: drop-shadow(0 0 15px #00ffff);
+    }
+    50% {
+        filter: drop-shadow(0 0 25px #ff00ff);
+    }
+    100% {
+        filter: drop-shadow(0 0 15px #00ffff);
+    }
+}
+
+@keyframes trailPulse {
+    0%, 100% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+}
+
+/* Character interaction effects */
+.floating-character:hover {
+    animation-play-state: paused;
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 30px #ffff00);
+}
+
+.floating-character.interactive {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+/* Responsive adjustments for floating character */
+@media (max-width: 768px) {
+    .floating-character {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .character-trail {
+        width: 80px;
+        height: 80px;
+    }
+}
+
+@media (max-width: 480px) {
+    .floating-character {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .character-trail {
+        width: 70px;
+        height: 70px;
+    }
 } 
