@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desktop Pet - Your Digital Companion</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-paw"></i>
+                <span>Desktop Pet</span>
+            </div>
+            <div class="nav-links">
+                <a href="#home">Home</a>
+                <a href="#features">Features</a>
+                <a href="#download">Download</a>
+                <a href="https://github.com/yourusername/pet" target="_blank">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1>Your Digital Companion</h1>
+                <p class="hero-subtitle">A delightful desktop pet that brings life to your computer screen. Watch as your virtual friend walks around, reacts to your actions, and keeps you company throughout your day.</p>
+                <div class="hero-buttons">
+                    <a href="#download" class="btn btn-primary">
+                        <i class="fas fa-download"></i>
+                        Download Now
+                    </a>
+                    <a href="#features" class="btn btn-secondary">
+                        <i class="fas fa-info-circle"></i>
+                        Learn More
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="pet-demo">
+                    <img src="Image/chibi01.png" alt="Desktop Pet Demo" class="demo-pet">
+                    <div class="demo-text">Your pet lives here!</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Why Choose Desktop Pet?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-walking"></i>
+                    </div>
+                    <h3>Animated Movement</h3>
+                    <p>Watch your pet walk around your screen with smooth, natural animations that bring it to life.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <h3>Background Music</h3>
+                    <p>Enjoy ambient background music that creates a pleasant atmosphere while you work or study.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-palette"></i>
+                    </div>
+                    <h3>Multiple Characters</h3>
+                    <p>Choose from various pet characters, each with unique animations and personalities.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h3>Easy Customization</h3>
+                    <p>Customize your pet's behavior, appearance, and settings to match your preferences.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Lightweight & Safe</h3>
+                    <p>Built with Java for cross-platform compatibility and minimal system resource usage.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3>Open Source</h3>
+                    <p>Completely open source - contribute, modify, and share with the community.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section class="screenshots">
+        <div class="container">
+            <h2>See It In Action</h2>
+            <div class="screenshot-grid">
+                <div class="screenshot-item">
+                    <img src="Image/chibi01.png" alt="Desktop Pet Screenshot 1">
+                    <p>Your pet exploring the desktop</p>
+                </div>
+                <div class="screenshot-item">
+                    <img src="Image/chibi02.png" alt="Desktop Pet Screenshot 2">
+                    <p>Different character options</p>
+                </div>
+                <div class="screenshot-item">
+                    <img src="Image/chibi03.png" alt="Desktop Pet Screenshot 3">
+                    <p>Special animations and interactions</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section id="download" class="download">
+        <div class="container">
+            <h2>Get Your Desktop Pet Today</h2>
+            <p class="download-description">Download the latest version and start enjoying your digital companion right away.</p>
+            
+            <div class="download-options">
+                <div class="download-card">
+                    <div class="download-icon">
+                        <i class="fab fa-windows"></i>
+                    </div>
+                    <h3>Windows Executable</h3>
+                    <p>Ready-to-run application for Windows</p>
+                    <a href="DesktopPet-EXE/DesktopPet.exe" class="btn btn-download" download>
+                        <i class="fas fa-download"></i>
+                        Download EXE
+                    </a>
+                    <small>Latest version - No installation required</small>
+                </div>
+                
+                <div class="download-card">
+                    <div class="download-icon">
+                        <i class="fab fa-github"></i>
+                    </div>
+                    <h3>Source Code</h3>
+                    <p>Build from source or contribute</p>
+                    <a href="https://github.com/yourusername/pet" class="btn btn-secondary" target="_blank">
+                        <i class="fab fa-github"></i>
+                        View on GitHub
+                    </a>
+                    <small>Open source - Java project</small>
+                </div>
+            </div>
+
+            <div class="system-requirements">
+                <h3>System Requirements</h3>
+                <ul>
+                    <li><i class="fas fa-check"></i> Windows 7 or later</li>
+                    <li><i class="fas fa-check"></i> Java Runtime Environment (JRE) 8 or later</li>
+                    <li><i class="fas fa-check"></i> 50MB free disk space</li>
+                    <li><i class="fas fa-check"></i> 512MB RAM minimum</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Desktop Pet</h4>
+                    <p>Bringing digital companionship to your desktop with open-source love.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Links</h4>
+                    <ul>
+                        <li><a href="https://github.com/yourusername/pet" target="_blank">GitHub Repository</a></li>
+                        <li><a href="README.md" target="_blank">Documentation</a></li>
+                        <li><a href="LICENSE" target="_blank">License</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="https://github.com/yourusername/pet/issues" target="_blank">Report Issues</a></li>
+                        <li><a href="https://github.com/yourusername/pet/discussions" target="_blank">Discussions</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Desktop Pet. Made with <i class="fas fa-heart"></i> and open source.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html> 
