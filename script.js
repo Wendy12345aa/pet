@@ -116,17 +116,20 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(typeWriter, 500);
     }
 
-    // Add scroll progress indicator
+    // Add cyberpunk scroll progress indicator
     const progressBar = document.createElement('div');
     progressBar.style.cssText = `
         position: fixed;
         top: 0;
         left: 0;
         width: 0%;
-        height: 3px;
-        background: linear-gradient(90deg, #6366f1, #8b5cf6);
+        height: 4px;
+        background: linear-gradient(90deg, #00ffff, #ff00ff, #ffff00, #00ffff);
+        background-size: 200% 100%;
         z-index: 1001;
         transition: width 0.1s ease;
+        animation: progressGlow 2s linear infinite;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
     `;
     document.body.appendChild(progressBar);
 
@@ -156,34 +159,45 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Add some fun interactive elements
+// Add cyberpunk interactive elements
 document.addEventListener('DOMContentLoaded', function() {
-    // Make the demo pet interactive
+    // Make the demo pet interactive with cyberpunk effects
     const demoPet = document.querySelector('.demo-pet');
     if (demoPet) {
         demoPet.addEventListener('click', function() {
-            this.style.transform = 'scale(1.1) rotate(5deg)';
+            this.style.transform = 'scale(1.2) rotate(10deg)';
+            this.style.filter = 'drop-shadow(0 0 30px #ff00ff) hue-rotate(180deg)';
+            
+            // Add glitch effect
+            this.classList.add('glitch-effect');
+            
             setTimeout(() => {
                 this.style.transform = 'scale(1) rotate(0deg)';
-            }, 200);
+                this.style.filter = 'drop-shadow(0 0 20px #00ffff)';
+                this.classList.remove('glitch-effect');
+            }, 300);
         });
     }
 
-    // Add particle effect to download buttons
+    // Add cyberpunk particle effect to download buttons
     const downloadButtons = document.querySelectorAll('.btn-download');
     downloadButtons.forEach(button => {
         button.addEventListener('click', function(e) {
-            // Create particle effect
-            for (let i = 0; i < 5; i++) {
+            // Create cyberpunk particle effect
+            for (let i = 0; i < 8; i++) {
                 const particle = document.createElement('div');
+                const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                
                 particle.style.cssText = `
                     position: absolute;
-                    width: 4px;
-                    height: 4px;
-                    background: #10b981;
+                    width: 6px;
+                    height: 6px;
+                    background: ${randomColor};
                     border-radius: 50%;
                     pointer-events: none;
-                    animation: particle 0.6s ease-out forwards;
+                    animation: particle 0.8s ease-out forwards;
+                    box-shadow: 0 0 10px ${randomColor};
                 `;
                 
                 const rect = this.getBoundingClientRect();
@@ -194,13 +208,82 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 setTimeout(() => {
                     particle.remove();
-                }, 600);
+                }, 800);
             }
+        });
+    });
+
+    // Add glitch effect to feature cards on hover
+    const featureCards = document.querySelectorAll('.feature-card');
+    featureCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.animation = 'glitchText 0.2s ease-in-out';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.animation = '';
+        });
+    });
+
+    // Add matrix-style text effect to titles
+    const titles = document.querySelectorAll('h1, h2, h3');
+    titles.forEach(title => {
+        title.addEventListener('mouseenter', function() {
+            this.style.textShadow = '0 0 20px #00ffff, 0 0 30px #00ffff, 0 0 40px #00ffff';
+        });
+        
+        title.addEventListener('mouseleave', function() {
+            this.style.textShadow = '0 0 20px #00ffff';
+        });
+    });
+
+    // Add cyberpunk sound effect simulation (visual feedback)
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Create a ripple effect
+            const ripple = document.createElement('div');
+            ripple.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 0;
+                height: 0;
+                border-radius: 50%;
+                background: rgba(0, 255, 255, 0.3);
+                transform: translate(-50%, -50%);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+            `;
+            
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
         });
     });
 });
 
-// Add CSS for particle animation
+// Add ripple animation
+const rippleStyle = document.createElement('style');
+rippleStyle.textContent = `
+    @keyframes ripple {
+        0% {
+            width: 0;
+            height: 0;
+            opacity: 1;
+        }
+        100% {
+            width: 300px;
+            height: 300px;
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(rippleStyle);
+
+// Add CSS for cyberpunk animations
 const style = document.createElement('style');
 style.textContent = `
     @keyframes particle {
@@ -212,6 +295,23 @@ style.textContent = `
             transform: translate(${Math.random() * 100 - 50}px, ${Math.random() * 100 - 50}px) scale(0);
             opacity: 0;
         }
+    }
+    
+    @keyframes progressGlow {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 200% 50%; }
+    }
+    
+    @keyframes glitchText {
+        0%, 100% { transform: translate(0); }
+        20% { transform: translate(-2px, 2px); }
+        40% { transform: translate(-2px, -2px); }
+        60% { transform: translate(2px, 2px); }
+        80% { transform: translate(2px, -2px); }
+    }
+    
+    .glitch-effect {
+        animation: glitchText 0.3s ease-in-out;
     }
 `;
 document.head.appendChild(style); 

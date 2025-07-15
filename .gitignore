@@ -35,12 +35,10 @@ Thumbs.db
 
 # Deployment and executable files
 *.exe
-*.zip
 *.tar.gz
 *.rar
 DesktopPet-EXE/
 portable-jre/
-DesktopPet-EXE.zip
 DesktopPet.exe
 
 # Portable JRE (large runtime files)
