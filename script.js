@@ -283,68 +283,228 @@ rippleStyle.textContent = `
 `;
 document.head.appendChild(rippleStyle);
 
-// Floating Character Animation and Interaction
-document.addEventListener('DOMContentLoaded', function() {
-    const floatingCharacter = document.getElementById('floatingCharacter');
-    const characterImg = floatingCharacter.querySelector('.character-img');
-    
-    if (floatingCharacter) {
-        // Make character interactive
-        floatingCharacter.classList.add('interactive');
-        
-        // Character click interaction
-        floatingCharacter.addEventListener('click', function() {
-            // Create explosion effect
-            createExplosion(this);
-            
-            // Change character image randomly
-            const characters = ['Image/chibi01.png', 'Image/chibi02.png', 'Image/chibi03.png'];
-            const randomChar = characters[Math.floor(Math.random() * characters.length)];
-            characterImg.src = randomChar;
-            
-            // Add glitch effect
-            this.style.animation = 'glitchText 0.3s ease-in-out';
-            setTimeout(() => {
-                this.style.animation = 'floatAround 20s linear infinite';
-            }, 300);
-        });
-        
-        // Mouse follow effect (subtle)
-        document.addEventListener('mousemove', function(e) {
-            const charRect = floatingCharacter.getBoundingClientRect();
-            const charCenterX = charRect.left + charRect.width / 2;
-            const charCenterY = charRect.top + charRect.height / 2;
-            
-            const distance = Math.sqrt(
-                Math.pow(e.clientX - charCenterX, 2) + 
-                Math.pow(e.clientY - charCenterY, 2)
-            );
-            
-            if (distance < 100) {
-                floatingCharacter.style.transform = 'scale(1.1)';
-                floatingCharacter.style.filter = 'drop-shadow(0 0 25px #ffff00)';
-            } else {
-                floatingCharacter.style.transform = '';
-                floatingCharacter.style.filter = '';
-            }
-        });
-        
-        // Random character changes
+// Walking Character Animation
+class WalkingCharacter {
+    constructor() {
+        this.character = document.getElementById('walkingCharacter');
+        this.sprite = document.getElementById('characterSprite');
+        this.currentFrame = 0;
+        this.walkingFrames = [
+            'resources/CharacterSets/Pets/ayano/walking/walking_frame_000.png',
+            'resources/CharacterSets/Pets/ayano/walking/walking_frame_001.png',
+            'resources/CharacterSets/Pets/ayano/walking/walking_frame_002.png'
+        ];
+        this.idleFrames = [
+            'resources/CharacterSets/Pets/ayano/idle/idle_frame_000.png'
+        ];
+        this.isWalking = true;
+        this.walkSpeed = 200; // milliseconds per frame
+        this.currentDirection = 1; // 1 for right, -1 for left
+        this.init();
+    }
+
+    init() {
+        this.startWalkingAnimation();
+        this.addInteraction();
+        this.startDirectionTracking();
+    }
+
+    startWalkingAnimation() {
         setInterval(() => {
-            if (Math.random() < 0.1) { // 10% chance every interval
-                const characters = ['Image/chibi01.png', 'Image/chibi02.png', 'Image/chibi03.png'];
-                const randomChar = characters[Math.floor(Math.random() * characters.length)];
-                characterImg.src = randomChar;
-                
-                // Add a small glow effect
-                floatingCharacter.style.filter = 'drop-shadow(0 0 30px #ff00ff)';
-                setTimeout(() => {
-                    floatingCharacter.style.filter = '';
-                }, 500);
+            if (this.isWalking) {
+                this.nextFrame();
             }
-        }, 5000); // Check every 5 seconds
+        }, this.walkSpeed);
+    }
+
+    nextFrame() {
+        this.currentFrame = (this.currentFrame + 1) % this.walkingFrames.length;
+        this.sprite.src = this.walkingFrames[this.currentFrame];
+    }
+
+    setWalking(walking) {
+        this.isWalking = walking;
+        if (walking) {
+            this.sprite.src = this.walkingFrames[this.currentFrame];
+        } else {
+            this.sprite.src = this.idleFrames[0];
+        }
+    }
+
+    startDirectionTracking() {
+        // Track animation progress to determine direction
+        let lastX = -100;
+        this.character.addEventListener('animationiteration', () => {
+            // Reset direction at the start of each cycle
+            this.setDirection(1);
+        });
+
+        // Monitor position changes during animation with fast updates
+        const observer = new MutationObserver(() => {
+            const computedStyle = window.getComputedStyle(this.character);
+            const transform = computedStyle.transform;
+            
+            if (transform && transform !== 'none') {
+                const matrix = transform.match(/matrix.*\((.+)\)/);
+                if (matrix) {
+                    const values = matrix[1].split(', ');
+                    const translateX = parseFloat(values[4]);
+                    
+                    if (translateX > lastX + 5) {
+                        this.setDirection(1); // Moving right
+                    } else if (translateX < lastX - 5) {
+                        this.setDirection(-1); // Moving left
+                    }
+                    lastX = translateX;
+                }
+            }
+        });
+
+        observer.observe(this.character, {
+            attributes: true,
+            attributeFilter: ['style']
+        });
+    }
+
+    setDirection(direction) {
+        if (this.currentDirection !== direction) {
+            this.currentDirection = direction;
+            // Apply very fast flip transition
+            this.sprite.style.transform = `scaleX(${direction})`;
+        }
+    }
+
+    addInteraction() {
+        this.character.addEventListener('mouseenter', () => {
+            this.setWalking(false);
+            this.character.style.animationPlayState = 'paused';
+        });
+
+        this.character.addEventListener('mouseleave', () => {
+            this.setWalking(true);
+            this.character.style.animationPlayState = 'running';
+        });
+
+        this.character.addEventListener('click', () => {
+            this.character.style.animationPlayState = 'paused';
+            setTimeout(() => {
+                this.character.style.animationPlayState = 'running';
+            }, 1000);
+        });
+    }
+}
+
+// Page Navigation System
+let currentPage = 'home-page';
+
+function showPage(pageId) {
+    // Hide current page
+    const currentPageElement = document.getElementById(currentPage);
+    if (currentPageElement) {
+        currentPageElement.classList.remove('active');
+        currentPageElement.classList.add('slide-out');
+    }
+
+    // Show new page
+    const newPageElement = document.getElementById(pageId);
+    if (newPageElement) {
+        newPageElement.classList.remove('slide-out');
+        newPageElement.classList.add('active');
+        currentPage = pageId;
+    }
+
+    // Update navigation active state
+    updateNavigation(pageId);
+}
+
+function updateNavigation(activePage) {
+    // Remove active class from all nav links
+    const navLinks = document.querySelectorAll('.nav-links a');
+    navLinks.forEach(link => link.classList.remove('active'));
+
+    // Add active class to current page link
+    const activeLink = document.querySelector(`[onclick="showPage('${activePage}')"]`);
+    if (activeLink) {
+        activeLink.classList.add('active');
+    }
+}
+
+// Language switching functionality
+let currentLanguage = 'en';
+
+function toggleLanguage() {
+    currentLanguage = currentLanguage === 'en' ? 'zh' : 'en';
+    updateLanguage();
+    updateLanguageButton();
+}
+
+function updateLanguage() {
+    const elements = document.querySelectorAll('[data-en][data-zh]');
+    elements.forEach(element => {
+        const text = element.getAttribute(`data-${currentLanguage}`);
+        if (text) {
+            element.textContent = text;
+        }
+    });
+}
+
+function updateLanguageButton() {
+    const langText = document.querySelector('.lang-text');
+    if (langText) {
+        langText.textContent = currentLanguage === 'en' ? 'EN' : '中';
+    }
+}
+
+// Initialize walking character when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new WalkingCharacter();
+    
+    // Show home page by default
+    showPage('home-page');
+    
+    // Initialize language
+    updateLanguage();
+
+    // Hamburger menu toggle
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    const navLinksWrapper = document.querySelector('.nav-links-wrapper');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    if (mobileMenuToggle && navLinksWrapper) {
+        mobileMenuToggle.addEventListener('click', function() {
+            navLinksWrapper.classList.toggle('active');
+        });
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    navLinksWrapper.classList.remove('active');
+                }
+            });
+        });
     }
 });
+
+// Floating Fish Animation
+const floatingFish = document.getElementById('floatingFish');
+let isFishInteractive = false;
+
+if (floatingFish) {
+    floatingFish.addEventListener('click', () => {
+        if (!isFishInteractive) {
+            isFishInteractive = true;
+            floatingFish.classList.add('interactive');
+            
+            // Change fish color temporarily
+            const fishIcon = floatingFish.querySelector('i');
+            fishIcon.style.color = '#10b981';
+            
+            setTimeout(() => {
+                isFishInteractive = false;
+                floatingFish.classList.remove('interactive');
+                fishIcon.style.color = '';
+            }, 500);
+        }
+    });
+}
 
 // Create explosion effect for character interaction
 function createExplosion(element) {
