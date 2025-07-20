@@ -16,17 +16,12 @@ After cleanup, this project has **one .bat file per function** to avoid confusio
 - **Use when**: You have a built JAR file and want to run the application
 - **Prerequisites**: Requires `lib/AdvancedDesktopPet.jar` and portable JRE
 
-### `cleanup_root.bat`
-- **Function**: Clean up root directory
-- **What it does**: Removes old files that have been moved to organized directories
-- **Use when**: After organizing the project structure
+### `cleanup_project.bat`
+- **Function**: Comprehensive project cleanup
+- **What it does**: Removes empty directories, old files, build artifacts, and deployment outputs
+- **Use when**: You want to clean up the project after organization or before distribution
 - **Safety**: Asks for confirmation before deleting
-
-### `cleanup_empty_folders.bat`
-- **Function**: Remove empty directories
-- **What it does**: Removes empty placeholder directories created during organization
-- **Use when**: After initial project setup
-- **Safety**: Asks for confirmation before deleting
+- **Includes**: Empty folders, old source files, build artifacts, deployment files, historical docs
 
 ## 📁 scripts/run/
 
@@ -66,6 +61,7 @@ After cleanup, this project has **one .bat file per function** to avoid confusio
 3. **Building**: Use `scripts/build/create_jar.bat` to create JAR
 4. **Distribution**: Use `scripts/build/create_exe.bat` to create EXE
 5. **Setup**: Use `scripts/setup/create_portable_jre.bat` for portable JRE
+6. **Cleanup**: Use `cleanup_project.bat` to clean up the project
 
 ## ✅ Benefits of This Organization
 
@@ -73,4 +69,5 @@ After cleanup, this project has **one .bat file per function** to avoid confusio
 - **Clean source**: All .class files go to `target/` directory
 - **Organized structure**: Scripts are in logical directories
 - **Clear purpose**: Each script has a specific, well-defined function
-- **Professional**: Follows standard project organization practices 
+- **Professional**: Follows standard project organization practices
+- **Comprehensive cleanup**: Single cleanup script handles all cleanup tasks 

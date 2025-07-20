@@ -3,7 +3,7 @@
 [![Java](https://img.shields.io/badge/Java-8+-orange.svg)](https://www.oracle.com/java/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.0-purple.svg)](https://github.com/yourusername/pet/releases)
+[![Version](https://img.shields.io/badge/Version-2.0-purple.svg)](https://github.com/Wendy12345aa/pet/releases)
 
 <div align="center">
   <img src="Image/chibi01.png" alt="桌面宠物" width="200"/>
@@ -38,7 +38,7 @@
 ### 开发环境
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/pet.git
+git clone https://github.com/Wendy12345aa/pet.git
 cd pet
 
 # 使用增强启动器运行
@@ -221,9 +221,9 @@ create_final_exe.bat
 
 ## 📞 支持
 
-- **问题反馈**: [GitHub Issues](https://github.com/yourusername/pet/issues)
-- **讨论**: [GitHub Discussions](https://github.com/yourusername/pet/discussions)
-- **维基**: [项目维基](https://github.com/yourusername/pet/wiki)
+- **问题反馈**: [GitHub Issues](https://github.com/Wendy12345aa/pet/issues)
+- **讨论**: [GitHub Discussions](https://github.com/Wendy12345aa/pet/discussions)
+- **维基**: [项目维基](https://github.com/Wendy12345aa/pet/wiki)
 
 ---
 

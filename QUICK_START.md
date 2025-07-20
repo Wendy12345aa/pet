@@ -2,34 +2,33 @@
 
 ## 🚀 **For Development**
 ```batch
-run_enhanced.bat    # Compile and run with error handling
+quick_run.bat    # Quick development run
 ```
 
 ## 📦 **For Distribution**
 ```batch
-create_final_exe.bat    # Create complete portable package
+scripts\build\create_exe.bat    # Create complete portable package
 ```
 
 ## 📁 **What You Get**
-The `DesktopPet-Portable-EXE` folder contains:
+The `DesktopPet-EXE` folder contains:
 - `DesktopPet.bat` - Launcher (no Java needed)
-- `jre/` - Embedded Java runtime
+- `portable-jre/` - Embedded Java runtime
 - `lib/AdvancedDesktopPet.jar` - Your application
-- `resources/Image/` - All character images
-- `resources/music/` - All music files
+- `resources/` - All character images and music files
 - `chibi01.ico` - Application icon
 
 ## 🎯 **For End Users**
-1. Extract `DesktopPet-Portable-EXE` folder anywhere
+1. Extract `DesktopPet-EXE` folder anywhere
 2. Double-click `DesktopPet.bat`
 3. Enjoy your desktop pet! 🐾
 
 ## 🛠️ **Troubleshooting**
 ```batch
-diagnose_java.bat    # Check Java installation
-cleanup.bat          # Clean up temp files
+cleanup_project.bat    # Clean up project files
 ```
 
 ## 📚 **Full Documentation**
 - [README.md](README.md) - Complete project overview
-- [STREAMLINED_WORKFLOW.md](STREAMLINED_WORKFLOW.md) - Detailed workflow guide 
+- [docs/STREAMLINED_WORKFLOW.md](docs/STREAMLINED_WORKFLOW.md) - Detailed workflow guide
+- [docs/BAT_FILES_SUMMARY.md](docs/BAT_FILES_SUMMARY.md) - Batch files documentation 

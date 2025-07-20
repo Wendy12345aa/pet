@@ -3,7 +3,7 @@
 [![Java](https://img.shields.io/badge/Java-8+-orange.svg)](https://www.oracle.com/java/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.0-purple.svg)](https://github.com/yourusername/pet/releases)
+[![Version](https://img.shields.io/badge/Version-2.0-purple.svg)](https://github.com/Wendy12345aa/pet/releases)
 
 ---
 
@@ -54,7 +54,7 @@ Join our community, contribute, or just enjoy your new digital friend!
 ### For Development / 开发环境
 ```bash
 # Clone the repository / 克隆仓库
-git clone https://github.com/yourusername/pet.git
+git clone https://github.com/Wendy12345aa/pet.git
 cd pet
 
 # Run with enhanced launcher / 使用增强启动器运行
@@ -239,9 +239,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support / 支持
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/pet/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/pet/discussions)
-- **Wiki**: [Project Wiki](https://github.com/yourusername/pet/wiki)
+- **Issues**: [GitHub Issues](https://github.com/Wendy12345aa/pet/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Wendy12345aa/pet/discussions)
+- **Wiki**: [Project Wiki](https://github.com/Wendy12345aa/pet/wiki)
 
 ---
 
