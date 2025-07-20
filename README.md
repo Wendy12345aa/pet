@@ -5,6 +5,22 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-2.0-purple.svg)](https://github.com/yourusername/pet/releases)
 
+---
+
+## About
+
+Desktop Pet is your digital companion—a delightful animated pet that lives on your desktop! Watch your pet walk, play, and interact with your screen, bringing joy and a peaceful atmosphere to your daily workflow. Enjoy smooth animations, calming ambient sounds, and a variety of customizable characters. Desktop Pet is lightweight, open source, and easy to personalize. Whether you want a cute friend to keep you company or a fun way to liven up your workspace, Desktop Pet is here for you.
+
+- Animated desktop pets with natural movement
+- Ambient background sounds for a relaxing environment
+- Multiple characters and easy customization
+- Safe, lightweight, and open source
+- Simple to download and use—no installation required
+
+Join our community, contribute, or just enjoy your new digital friend!
+
+---
+
 <div align="center">
   <img src="Image/chibi01.png" alt="Desktop Pet" width="200"/>
   <br/>
