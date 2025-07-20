@@ -481,6 +481,35 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+    // Water bubble effect: dynamically generate bubbles
+    const bubblesContainer = document.querySelector('.bubbles');
+    function createBubble() {
+        if (!bubblesContainer) return;
+        const bubble = document.createElement('div');
+        bubble.classList.add('bubble');
+        // Random size between 32px and 72px
+        const size = Math.random() * 40 + 32;
+        bubble.style.width = `${size}px`;
+        bubble.style.height = `${size}px`;
+        // Random horizontal position (0% to 100% of viewport width)
+        bubble.style.left = `${Math.random() * 100}%`;
+        // Random animation duration between 7s and 16s
+        const duration = Math.random() * 9 + 7;
+        bubble.style.animationDuration = `${duration}s`;
+        // Random animation delay for smoother effect
+        bubble.style.animationDelay = `${Math.random() * 2}s`;
+        // Start at bottom
+        bubble.style.bottom = '-40px';
+        // Add to container
+        bubblesContainer.appendChild(bubble);
+        // Remove bubble after animation
+        bubble.addEventListener('animationend', () => {
+            bubble.remove();
+        });
+    }
+    // Generate bubbles continuously
+    setInterval(createBubble, 300);
 });
 
 // Floating Fish Animation
