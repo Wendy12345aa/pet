@@ -16,24 +16,17 @@
                 <i class="fas fa-paw"></i>
                 <span>Desktop Pet</span>
             </div>
-            <button class="mobile-menu-toggle" aria-label="Menu">
-                <span class="bar"></span>
-                <span class="bar"></span>
-                <span class="bar"></span>
-            </button>
             <div class="nav-links-wrapper">
                 <div class="nav-links">
                     <a href="#home" onclick="showPage('home-page')" data-en="Home" data-zh="首页">Home</a>
                     <a href="#features" onclick="showPage('features-page')" data-en="Features" data-zh="功能">Features</a>
                     <a href="#download" onclick="showPage('download-page')" data-en="Download" data-zh="下载">Download</a>
-                    <a href="https://github.com/Wendy12345aa/pet" target="_blank" class="mobile-github-link">
-                        <i class="fab fa-github"></i> <span data-en="GitHub" data-zh="GitHub">GitHub</span>
-                    </a>
                 </div>
             </div>
             <div class="nav-links-desktop">
                 <a href="https://github.com/Wendy12345aa/pet" target="_blank">
-                    <i class="fab fa-github"></i> <span class="github-text" data-en="GitHub" data-zh="GitHub">GitHub</span>
+                    <!-- Removed the GitHub icon -->
+                    <span class="github-text" data-en="GitHub" data-zh="GitHub">GitHub</span>
                 </a>
             </div>
             <button class="language-switch" onclick="toggleLanguage()">
@@ -218,6 +211,14 @@
         <div class="bubble"></div>
         <div class="bubble"></div>
         <div class="bubble"></div>
+    </div>
+
+    <!-- Floating navigation buttons for mobile -->
+    <div class="floating-nav" id="floatingNav">
+        <button class="fab" onclick="showPage('home-page')" aria-label="Home"><i class="fas fa-home"></i></button>
+        <button class="fab" onclick="showPage('features-page')" aria-label="Features"><i class="fas fa-star"></i></button>
+        <button class="fab" onclick="showPage('download-page')" aria-label="Download"><i class="fas fa-download"></i></button>
+        <a class="fab" href="https://github.com/Wendy12345aa/pet" target="_blank" aria-label="GitHub"><i class="fab fa-github"></i></a>
     </div>
 
     <script src="script.js"></script>
