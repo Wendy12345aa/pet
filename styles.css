@@ -1185,10 +1185,13 @@ body::before {
 /* Responsive Design */
 @media (max-width: 768px) {
     body {
-        background: url('/Image/background.png') no-repeat center center !important;
+        background: url('Image/background.png') no-repeat center center !important;
         background-size: cover !important;
         background-attachment: scroll !important;
         background-color: #1e3a8a !important;
+    }
+    .page-container {
+        margin-top: 60px !important;
     }
     
     /* Remove any backdrop-filter effects on mobile */
@@ -1263,10 +1266,13 @@ body::before {
 
 @media (max-width: 480px) {
     body {
-        background: url('/Image/background.png') no-repeat center center !important;
+        background: url('Image/background.png') no-repeat center center !important;
         background-size: cover !important;
         background-attachment: scroll !important;
         background-color: #1e3a8a !important;
+    }
+    .page-container {
+        margin-top: 60px !important;
     }
     
     /* Ensure no blur effects on small mobile */
