@@ -1185,8 +1185,10 @@ body::before {
 /* Responsive Design */
 @media (max-width: 768px) {
     body {
-        background-attachment: scroll;
+        background: url('Image/background.png') no-repeat center center;
         background-size: cover;
+        background-attachment: scroll;
+        background-color: #1e3a8a;
     }
     
     /* Remove any backdrop-filter effects on mobile */
@@ -1261,9 +1263,10 @@ body::before {
 
 @media (max-width: 480px) {
     body {
-        background-attachment: scroll;
+        background: url('Image/background.png') no-repeat center center;
         background-size: cover;
-        background-position: center top;
+        background-attachment: scroll;
+        background-color: #1e3a8a;
     }
     
     /* Ensure no blur effects on small mobile */
