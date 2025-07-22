@@ -1187,7 +1187,6 @@ body::before {
     body {
         background: url('Image/background.png') no-repeat center center !important;
         background-size: cover !important;
-        background-attachment: scroll !important;
         background-color: #1e3a8a !important;
     }
     .page-container {
@@ -1268,7 +1267,6 @@ body::before {
     body {
         background: url('Image/background.png') no-repeat center center !important;
         background-size: cover !important;
-        background-attachment: scroll !important;
         background-color: #1e3a8a !important;
     }
     .page-container {
