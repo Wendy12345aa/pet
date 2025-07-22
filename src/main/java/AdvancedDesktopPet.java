@@ -2884,28 +2884,30 @@ public class AdvancedDesktopPet extends JWindow implements MouseListener, MouseM
     }
     
     private void updateIdleSprite() {
-        // Only stop multi-frame animation if we're actually going to idle (not walking)
-        if (multiFrameAnimationTimer.isRunning() && !isWalking && !isPainAnimationActive) {
-            multiFrameAnimationTimer.stop();
-            System.out.println("Stopped multi-frame animation");
-        }
-        
         // Only update idle sprite if we're actually idle (not walking and not in pain)
         if (!isWalking && !isPainAnimationActive) {
             // Check if we have character sets available
             CharacterSet currentSet = characterSetManager.getCurrentPetCharacterSet();
             if (currentSet != null && currentSet.getIdleAnimation().getFrameCount() > 0) {
-                // Use character set idle animation
-                AnimationFrame idleFrame = currentSet.getIdleAnimation().getCurrentFrame();
-                if (idleFrame != null) {
-                    petLabel.setIcon(getFlippedIcon(idleFrame.getImage()));
-                } else {
-                    // Fallback to legacy
-        petLabel.setIcon(getFlippedIcon(idleGif));
+                // Start idle animation loop if not already running
+                if (!multiFrameAnimationTimer.isRunning()) {
+                    System.out.println("Starting idle animation loop");
+                    currentSet.getIdleAnimation().reset(); // Reset to first frame
+                    multiFrameAnimationTimer.start();
                 }
             } else {
-                // Fall back to legacy animation system
+                // Fall back to legacy animation system - static idle frame
+                if (multiFrameAnimationTimer.isRunning()) {
+                    multiFrameAnimationTimer.stop();
+                    System.out.println("Stopped multi-frame animation for legacy idle");
+                }
                 petLabel.setIcon(getFlippedIcon(idleGif));
+            }
+        } else {
+            // If we're walking or in pain, stop idle animation
+            if (multiFrameAnimationTimer.isRunning() && !isPainAnimationActive && !isWalking) {
+                multiFrameAnimationTimer.stop();
+                System.out.println("Stopped idle animation - pet is moving or in pain");
             }
         }
     }

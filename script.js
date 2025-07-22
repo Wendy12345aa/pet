@@ -74,15 +74,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Mobile menu toggle (if needed in the future)
+    // Mobile menu toggle
     const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-    const navLinks = document.querySelector('.nav-links');
+    const navLinksWrapper = document.querySelector('.nav-links-wrapper');
     
     if (mobileMenuToggle) {
         mobileMenuToggle.addEventListener('click', function() {
-            navLinks.classList.toggle('active');
+            navLinksWrapper.classList.toggle('active');
+            // Toggle hamburger animation
+            this.classList.toggle('active');
         });
     }
+    
+    // Close mobile menu when clicking on a link
+    const mobileMenuLinks = document.querySelectorAll('.nav-links a');
+    mobileMenuLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (navLinksWrapper.classList.contains('active')) {
+                navLinksWrapper.classList.remove('active');
+                mobileMenuToggle.classList.remove('active');
+            }
+        });
+    });
 
     // Add parallax effect to hero section
     window.addEventListener('scroll', function() {
@@ -290,12 +303,13 @@ class WalkingCharacter {
         this.sprite = document.getElementById('characterSprite');
         this.currentFrame = 0;
         this.walkingFrames = [
-            'resources/CharacterSets/Pets/ayano/walking/walking_frame_000.png',
-            'resources/CharacterSets/Pets/ayano/walking/walking_frame_001.png',
-            'resources/CharacterSets/Pets/ayano/walking/walking_frame_002.png'
+            'resources/CharacterSets/Pets/New_pet_1753150496386/walking/walking_frame_000.png',
+            'resources/CharacterSets/Pets/New_pet_1753150496386/walking/walking_frame_001.png',
+            'resources/CharacterSets/Pets/New_pet_1753150496386/walking/walking_frame_002.png',
+            'resources/CharacterSets/Pets/New_pet_1753150496386/walking/walking_frame_003.png'
         ];
         this.idleFrames = [
-            'resources/CharacterSets/Pets/ayano/idle/idle_frame_000.png'
+            'resources/CharacterSets/Pets/New_pet_1753150496386/idle/idle_frame_000.png'
         ];
         this.isWalking = true;
         this.walkSpeed = 200; // milliseconds per frame
