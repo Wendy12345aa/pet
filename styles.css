@@ -1184,7 +1184,7 @@ body::before {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    body {
+    html, body {
         background: url('Image/background.png') no-repeat center center !important;
         background-size: cover !important;
         background-color: #1e3a8a !important;
@@ -1264,7 +1264,7 @@ body::before {
 }
 
 @media (max-width: 480px) {
-    body {
+    html, body {
         background: url('Image/background.png') no-repeat center center !important;
         background-size: cover !important;
         background-color: #1e3a8a !important;
