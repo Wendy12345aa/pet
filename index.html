@@ -1,227 +1,50 @@
-<!-- Trigger CI/CD redeploy: mobile background image fix -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Desktop Pet - Your Digital Companion</title>
+    <title>Web Pet App</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-logo">
-                <i class="fas fa-paw"></i>
-                <span>Desktop Pet</span>
-            </div>
-            <div class="nav-links-wrapper">
-                <div class="nav-links">
-                    <a href="#home" onclick="showPage('home-page')" data-en="Home" data-zh="首页">Home</a>
-                    <a href="#features" onclick="showPage('features-page')" data-en="Features" data-zh="功能">Features</a>
-                    <a href="#download" onclick="showPage('download-page')" data-en="Download" data-zh="下载">Download</a>
-                </div>
-            </div>
-            <div class="nav-links-desktop">
-                <a href="https://github.com/Wendy12345aa/pet" target="_blank">
-                    <!-- Removed the GitHub icon -->
-                    <span class="github-text" data-en="GitHub" data-zh="GitHub">GitHub</span>
-                </a>
-            </div>
-            <button class="language-switch" onclick="toggleLanguage()">
-                <i class="fas fa-globe"></i>
-                <span class="lang-text" data-en="EN" data-zh="中">EN</span>
-            </button>
+    <div id="app">
+        <canvas id="petCanvas" width="800" height="600"></canvas>
+        
+        <div id="controls">
+            <button id="togglePet">Toggle Pet</button>
+            <button id="settings">Settings</button>
         </div>
-    </nav>
-
-    <!-- Page Container -->
-    <div class="page-container">
-        <!-- Home Page -->
-        <div class="page" id="home-page">
-            <div class="hero">
-                <div class="hero-container">
-                    <div class="hero-content">
-                        <h1 data-en="Your Digital Companion" data-zh="您的数字伙伴">Your Digital Companion</h1>
-                        <p class="hero-subtitle" data-en="A magical desktop pet that brings joy to your screen. Watch as your digital friend moves gracefully across your desktop, creating a peaceful atmosphere for your daily adventures." data-zh="一个神奇的桌面宠物，为您的屏幕带来欢乐。看着您的数字朋友优雅地在桌面上移动，为您的日常冒险创造宁静的氛围。">A magical desktop pet that brings joy to your screen. Watch as your digital friend moves gracefully across your desktop, creating a peaceful atmosphere for your daily adventures.</p>
-                        <div class="hero-buttons">
-                            <a href="#download" class="btn btn-primary" onclick="showPage('download-page')">
-                                <i class="fas fa-download"></i>
-                                <span data-en="Download Now" data-zh="立即下载">Download Now</span>
-                            </a>
-                            <a href="#features" class="btn btn-secondary" onclick="showPage('features-page')">
-                                <i class="fas fa-info-circle"></i>
-                                <span data-en="Learn More" data-zh="了解更多">Learn More</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="hero-image">
-                        <div class="pet-demo">
-                            <div class="walking-character" id="walkingCharacter">
-                                <img src="resources/CharacterSets/Pets/New_pet_1753150496386/walking/walking_frame_000.png" alt="Innesi Walking Pet" class="character-sprite" id="characterSprite">
-                                <div class="character-shadow"></div>
-                            </div>
-                            <div class="demo-text" data-en="Your digital friend awaits!" data-zh="您的数字朋友正在等待！">Your digital friend awaits!</div>
-                        </div>
-                    </div>
-                </div>
+        
+        <div id="settingsPanel" class="hidden">
+            <h3>Pet Settings</h3>
+            <div class="setting">
+                <label>Size: <span id="sizeValue">128</span>px</label>
+                <input type="range" id="sizeSlider" min="64" max="256" value="128">
             </div>
+            <div class="setting">
+                <label>Animation Speed: <span id="speedValue">150</span>ms</label>
+                <input type="range" id="speedSlider" min="50" max="300" value="150">
+            </div>
+            <div class="setting">
+                <label>Movement Speed: <span id="moveSpeedValue">3</span>px</label>
+                <input type="range" id="moveSpeedSlider" min="1" max="10" value="3">
+            </div>
+            <button id="closeSettings">Close</button>
         </div>
-
-        <!-- Features Page -->
-        <div class="page" id="features-page">
-            <div class="features">
-                <div class="container">
-                    <h2 data-en="Why Choose Desktop Pet?" data-zh="为什么选择桌面宠物？">Why Choose Desktop Pet?</h2>
-                    <div class="features-grid">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="fas fa-running"></i>
-                            </div>
-                            <h3 data-en="Natural Movement" data-zh="自然移动">Natural Movement</h3>
-                            <p data-en="Watch your digital companion move gracefully across the screen with smooth, natural animations that bring life to your desktop." data-zh="看着您的数字伙伴以流畅自然的动画优雅地在屏幕上移动，为您的桌面带来生机。">Watch your digital companion move gracefully across the screen with smooth, natural animations that bring life to your desktop.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="fas fa-music"></i>
-                            </div>
-                            <h3 data-en="Ambient Sounds" data-zh="环境音效">Ambient Sounds</h3>
-                            <p data-en="Immerse yourself in calming soundscapes that create the perfect peaceful atmosphere for your work." data-zh="沉浸在平静的音景中，为您的工作创造完美的宁静氛围。">Immerse yourself in calming soundscapes that create the perfect peaceful atmosphere for your work.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="fas fa-palette"></i>
-                            </div>
-                            <h3 data-en="Custom Characters" data-zh="自定义角色">Custom Characters</h3>
-                            <p data-en="Choose from various characters or upload your own, each with unique personalities and behaviors." data-zh="从各种角色中选择或上传您自己的角色，每个角色都有独特的个性和行为。">Choose from various characters or upload your own, each with unique personalities and behaviors.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="fas fa-cog"></i>
-                            </div>
-                            <h3 data-en="Easy Customization" data-zh="轻松定制">Easy Customization</h3>
-                            <p data-en="Personalize your companion's appearance, movement patterns, and behaviors to match your preferences." data-zh="个性化您的伙伴的外观、移动模式和行为，以匹配您的偏好。">Personalize your companion's appearance, movement patterns, and behaviors to match your preferences.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <h3 data-en="Safe & Lightweight" data-zh="安全轻量">Safe & Lightweight</h3>
-                            <p data-en="Built with advanced Java architecture for maximum security and minimal system resource consumption." data-zh="采用先进的Java架构构建，确保最大安全性和最小系统资源消耗。">Built with advanced Java architecture for maximum security and minimal system resource consumption.</p>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="fas fa-heart"></i>
-                            </div>
-                            <h3 data-en="Open Source Love" data-zh="开源之爱">Open Source Love</h3>
-                            <p data-en="Fully transparent open-source architecture - contribute to the community and share with pet lovers worldwide." data-zh="完全透明的开源架构 - 为社区做出贡献并与全球宠物爱好者分享。">Fully transparent open-source architecture - contribute to the community and share with pet lovers worldwide.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Screenshots Page -->
-        <div class="page" id="screenshots-page">
-            <div class="screenshots">
-                <div class="container">
-                    <h2>See It In Action</h2>
-                    <div class="screenshot-grid">
-                        <div class="screenshot-item">
-                            <img src="Image/chibi01.png" alt="Desktop Pet Screenshot 1">
-                            <p>Your pet exploring the digital world</p>
-                        </div>
-                        <div class="screenshot-item">
-                            <img src="Image/chibi02.png" alt="Desktop Pet Screenshot 2">
-                            <p>Different character options</p>
-                        </div>
-                        <div class="screenshot-item">
-                            <img src="Image/chibi03.png" alt="Desktop Pet Screenshot 3">
-                            <p>Special animations and behaviors</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Download Page -->
-        <div class="page" id="download-page">
-            <div class="download">
-                <div class="container">
-                    <h2 data-en="Start Your Journey" data-zh="开始您的旅程">Start Your Journey</h2>
-                    <p class="download-description" data-en="Download the latest version and start enjoying your digital companion right away." data-zh="下载最新版本，立即开始享受您的数字伙伴。">Download the latest version and start enjoying your digital companion right away.</p>
-                    
-                    <div class="download-options">
-                        <div class="download-card">
-                            <div class="download-icon">
-                                <i class="fab fa-windows"></i>
-                            </div>
-                            <h3 data-en="Windows Executable" data-zh="Windows 可执行文件">Windows Executable</h3>
-                            <p data-en="Ready-to-run application for Windows" data-zh="Windows 即用型应用程序">Ready-to-run application for Windows</p>
-                            <a href="https://drive.google.com/uc?export=download&id=1zXz1J_lPk-YX25nBw2Hgjiu7XGyyb8iZ" class="btn btn-download" target="_blank">
-                                <i class="fas fa-download"></i>
-                                <span data-en="Download EXE" data-zh="下载 EXE">Download EXE</span>
-                            </a>
-                            <small data-en="Latest version - No installation required" data-zh="最新版本 - 无需安装">Latest version - No installation required</small>
-                        </div>
-                        
-                        <div class="download-card">
-                            <div class="download-icon">
-                                <i class="fab fa-github"></i>
-                            </div>
-                            <h3 data-en="Source Code" data-zh="源代码">Source Code</h3>
-                            <p data-en="Build from source or contribute" data-zh="从源代码构建或贡献">Build from source or contribute</p>
-                            <a href="https://github.com/Wendy12345aa/pet" class="btn btn-secondary" target="_blank">
-                                <i class="fab fa-github"></i>
-                                <span data-en="View on GitHub" data-zh="在 GitHub 上查看">View on GitHub</span>
-                            </a>
-                            <small data-en="Open source - Java project" data-zh="开源 - Java 项目">Open source - Java project</small>
-                        </div>
-                    </div>
-
-                    <div class="system-requirements">
-                        <h3 data-en="System Requirements" data-zh="系统要求">System Requirements</h3>
-                        <ul>
-                            <li><i class="fas fa-check"></i> <span data-en="Windows 7 or later" data-zh="Windows 7 或更高版本">Windows 7 or later</span></li>
-                            <li><i class="fas fa-check"></i> <span data-en="50MB free disk space" data-zh="50MB 可用磁盘空间">50MB free disk space</span></li>
-                            <li><i class="fas fa-check"></i> <span data-en="512MB RAM minimum" data-zh="最少 512MB 内存">512MB RAM minimum</span></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+        <!-- RPG Title Overlay -->
+        <div id="rpgTitleOverlay">
+            <div id="rpgTitle">Your Digital Companion</div>
+            <a id="rpgDownloadBtn" href="https://drive.google.com/uc?export=download&id=1zXz1J_lPk-YX25nBw2Hgjiu7XGyyb8iZ" target="_blank">Download EXE</a>
         </div>
     </div>
-
-    <!-- Animated Floating Pet -->
-    <div class="floating-fish" id="floatingFish">
-        <i class="fas fa-fish"></i>
-        <div class="fish-trail"></div>
-    </div>
-
-    <!-- Floating Bubbles -->
-    <div class="bubbles">
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-        <div class="bubble"></div>
-    </div>
-
-    <!-- Floating navigation buttons for mobile -->
-    <div class="floating-nav" id="floatingNav">
-        <button class="fab" onclick="showPage('home-page')" aria-label="Home"><i class="fas fa-home"></i></button>
-        <button class="fab" onclick="showPage('features-page')" aria-label="Features"><i class="fas fa-star"></i></button>
-        <button class="fab" onclick="showPage('download-page')" aria-label="Download"><i class="fas fa-download"></i></button>
-        <a class="fab" href="https://github.com/Wendy12345aa/pet" target="_blank" aria-label="GitHub"><i class="fab fa-github"></i></a>
-    </div>
-
-    <script src="script.js"></script>
+    
+    <script src="js/AnimationManager.js?v=1"></script>
+    <script src="js/MovementManager.js?v=1"></script>
+    <script src="js/BehaviorManager.js?v=1"></script>
+    <script src="js/InteractionManager.js?v=1"></script>
+    <script src="js/BubbleManager.js?v=1"></script>
+    <script src="js/PetEngine.js?v=1"></script>
+    <script src="js/main.js?v=1"></script>
 </body>
 </html> 
