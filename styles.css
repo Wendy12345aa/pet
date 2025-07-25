@@ -167,23 +167,35 @@ canvas {
 
 #settingsPanel {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    z-index: 20;
-    min-width: 300px;
+    top: 80px;
+    right: 40px;
+    width: 320px;
+    background: var(--settings-bg, rgba(255,255,255,0.95));
+    color: var(--settings-text, #222);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    padding: 2rem 1.5rem 1.5rem 1.5rem;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    border: 1.5px solid var(--settings-border, #e0e0e0);
+    transition: background 0.3s, color 0.3s;
+}
+
+[data-theme="dark"] #settingsPanel {
+    --settings-bg: rgba(20, 24, 36, 0.98);
+    --settings-text: #e0e6f0;
+    --settings-border: #223366;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
 
 #settingsPanel h3 {
-    margin-bottom: 20px;
-    color: #333;
-    text-align: center;
-    font-size: 1.5em;
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+    color: inherit;
+    font-family: 'Cinzel', 'Georgia', serif;
+    letter-spacing: 1px;
 }
 
 .setting {
@@ -232,15 +244,16 @@ canvas {
     padding: 12px;
     border: none;
     border-radius: 8px;
-    background: #667eea;
-    color: white;
+    background: var(--button-bg);
+    color: var(--button-text);
     font-weight: 500;
     cursor: pointer;
     transition: background 0.3s ease;
 }
 
 #closeSettings:hover {
-    background: #5a6fd8;
+    background: var(--button-border);
+    color: var(--button-text);
 }
 
 .hidden {
@@ -311,54 +324,42 @@ canvas {
     width: 100%;
 }
 
-#rpgDownloadBtn {
+#rpgDownloadBtn, #tryOnlineBtn {
     font-family: 'Cinzel', 'Georgia', serif;
     font-size: 1.5rem;
-    background: linear-gradient(45deg, #00ffff, #0080ff);
-    color: #ffffff;
-    border: 2px solid #00ffff;
+    background: transparent;
+    color: #fff;
+    border: 2px solid #00b8ff;
     border-radius: 25px;
     padding: 1rem 2.5rem;
-    box-shadow: 
-        0 0 20px #00ffff,
-        0 0 40px #00ffff,
-        0 4px 16px rgba(0,0,0,0.3);
+    box-shadow: 0 0 20px #00b8ff, 0 0 40px #00ffb8, 0 4px 16px rgba(0,0,0,0.3);
     text-decoration: none;
     font-weight: bold;
     transition: all 0.3s ease;
-    margin-top: 1rem;
+    margin: 1rem 0 1.5rem 0;
     cursor: pointer;
     pointer-events: auto;
+    display: block;
+    width: auto;
     animation: glow 2s ease-in-out infinite alternate;
 }
-
-#rpgDownloadBtn:hover {
-    background: linear-gradient(45deg, #0080ff, #00ffff);
-    transform: scale(1.1);
-    box-shadow: 
-        0 0 30px #00ffff,
-        0 0 60px #00ffff,
-        0 6px 20px rgba(0,0,0,0.4);
+#rpgDownloadBtn:hover, #tryOnlineBtn:hover {
+    background: rgba(0, 184, 255, 0.12);
+    border-color: #00ffb8;
+    transform: scale(1.08);
+    box-shadow: 0 0 30px #00ffb8, 0 0 60px #00b8ff, 0 6px 20px rgba(0,0,0,0.4);
 }
 
-/* Dark mode download button */
-[data-theme="dark"] #rpgDownloadBtn {
-    background: linear-gradient(45deg, #1a1a2e, #16213e);
+[data-theme="dark"] #rpgDownloadBtn, [data-theme="dark"] #tryOnlineBtn {
+    background: transparent;
     color: #ffffff;
     border: 2px solid rgba(100, 150, 255, 0.6);
-    box-shadow: 
-        0 0 15px rgba(100, 150, 255, 0.4),
-        0 0 30px rgba(100, 150, 255, 0.2),
-        0 4px 16px rgba(0,0,0,0.5);
+    box-shadow: 0 0 15px rgba(100, 150, 255, 0.4), 0 0 30px rgba(100, 150, 255, 0.2), 0 4px 16px rgba(0,0,0,0.5);
 }
-
-[data-theme="dark"] #rpgDownloadBtn:hover {
-    background: linear-gradient(45deg, #16213e, #1a1a2e);
+[data-theme="dark"] #rpgDownloadBtn:hover, [data-theme="dark"] #tryOnlineBtn:hover {
+    background: rgba(100, 150, 255, 0.10);
     border-color: rgba(100, 150, 255, 0.8);
-    box-shadow: 
-        0 0 20px rgba(100, 150, 255, 0.6),
-        0 0 40px rgba(100, 150, 255, 0.3),
-        0 6px 20px rgba(0,0,0,0.6);
+    box-shadow: 0 0 20px rgba(100, 150, 255, 0.6), 0 0 40px rgba(100, 150, 255, 0.3), 0 6px 20px rgba(0,0,0,0.6);
 }
 
 @keyframes float {
@@ -372,3 +373,63 @@ canvas {
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap'); 
+
+#controls a#downloadExeTopBtn {
+    display: none;
+    align-items: center;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    background: var(--button-bg);
+    color: var(--button-text);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--button-border);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
+    gap: 0.5em;
+}
+#controls a#downloadExeTopBtn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+[data-theme="dark"] #controls a#downloadExeTopBtn {
+    background: var(--button-bg);
+    color: var(--button-text);
+    border: 1px solid var(--button-border);
+}
+[data-theme="dark"] #controls a#downloadExeTopBtn:hover {
+    background: rgba(40, 40, 40, 0.9);
+    color: #fff;
+    border-color: rgba(100, 150, 255, 0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+} 
+
+@media (max-width: 600px) {
+    #controls {
+        top: 10px;
+        right: 10px;
+        gap: 6px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    #controls button, #controls a#downloadExeTopBtn {
+        padding: 6px 10px;
+        font-size: 0.95rem;
+        min-width: 36px;
+        max-width: 120px;
+        border-radius: 18px;
+    }
+    #controls a#downloadExeTopBtn span,
+    #controls button#darkModeToggle span {
+        display: none;
+    }
+    #controls a#downloadExeTopBtn i,
+    #controls button#darkModeToggle i {
+        font-size: 1.2em;
+    }
+} 

@@ -101,6 +101,18 @@ class WebPetApp {
         // Settings sliders
         this.setupSettingsSliders();
         
+        // Try Online button
+        const tryOnlineBtn = document.getElementById('tryOnlineBtn');
+        if (tryOnlineBtn) {
+            tryOnlineBtn.addEventListener('click', () => {
+                const overlay = document.getElementById('rpgTitleOverlay');
+                if (overlay) overlay.style.display = 'none';
+                // Show the top-right download button
+                const topDownloadBtn = document.getElementById('downloadExeTopBtn');
+                if (topDownloadBtn) topDownloadBtn.style.display = 'inline-flex';
+            });
+        }
+        
         // Initialize theme from localStorage
         this.initializeTheme();
     }
