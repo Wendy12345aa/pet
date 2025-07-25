@@ -61,13 +61,25 @@ class BubbleManager {
      * Draw all bubbles
      */
     draw() {
+        // Check if dark mode is active
+        const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+        
         this.bubbles.forEach(bubble => {
             this.ctx.save();
             
-            // Set bubble style
+            // Set bubble style based on theme
             this.ctx.globalAlpha = bubble.opacity;
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            
+            if (isDarkMode) {
+                // Dark mode bubble colors - blue/cyan theme
+                this.ctx.fillStyle = 'rgba(100, 150, 255, 0.8)';
+                this.ctx.strokeStyle = 'rgba(100, 150, 255, 0.4)';
+            } else {
+                // Light mode bubble colors - white theme
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            }
+            
             this.ctx.lineWidth = 1;
             
             // Draw bubble
@@ -77,7 +89,12 @@ class BubbleManager {
             this.ctx.stroke();
             
             // Add highlight
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            if (isDarkMode) {
+                this.ctx.fillStyle = 'rgba(150, 200, 255, 0.6)';
+            } else {
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            }
+            
             this.ctx.beginPath();
             this.ctx.arc(bubble.x - bubble.size * 0.3, bubble.y - bubble.size * 0.3, bubble.size * 0.3, 0, Math.PI * 2);
             this.ctx.fill();

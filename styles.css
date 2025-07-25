@@ -1,7 +1,23 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* CSS Variables for theming */
+:root {
+    --bg-color: #f0f8ff;
+    --text-color: #333;
+    --title-color: rgba(255, 255, 255, 0.9);
+    --title-glow: rgba(173, 216, 230, 0.6);
+    --button-bg: rgba(255, 255, 255, 0.8);
+    --button-text: #333;
+    --button-border: rgba(255, 255, 255, 0.3);
+}
+
+/* Dark mode variables */
+[data-theme="dark"] {
+    --bg-color: #0a0a0a;
+    --text-color: #ffffff;
+    --title-color: rgba(255, 255, 255, 0.95);
+    --title-glow: rgba(100, 150, 255, 0.8);
+    --button-bg: rgba(20, 20, 20, 0.8);
+    --button-text: #ffffff;
+    --button-border: rgba(100, 150, 255, 0.3);
 }
 
 body {
@@ -17,6 +33,25 @@ body {
     height: 100vh;
     margin: 0;
     padding: 0;
+    transition: all 0.3s ease;
+}
+
+/* Dark mode background - more specific and forceful */
+body[data-theme="dark"] {
+    background: url('Image/background_dark.png') no-repeat center center fixed !important;
+    background-size: cover !important;
+    background-attachment: fixed !important;
+}
+
+/* Also target the app container to ensure it inherits the dark background */
+#app[data-theme="dark"] {
+    background: url('Image/background_dark.png') no-repeat center center fixed !important;
+    background-size: cover !important;
+}
+
+/* Remove the gradient overlay since we're using the dark background image */
+body[data-theme="dark"]::before {
+    display: none;
 }
 
 #app {
@@ -76,13 +111,13 @@ canvas {
     padding: 10px 20px;
     border: none;
     border-radius: 25px;
-    background: rgba(255, 255, 255, 0.8);
-    color: #333;
+    background: var(--button-bg);
+    color: var(--button-text);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid var(--button-border);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
@@ -91,6 +126,14 @@ canvas {
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     color: #000;
+}
+
+/* Dark mode hover effect */
+[data-theme="dark"] #controls button:hover {
+    background: rgba(40, 40, 40, 0.9);
+    color: #ffffff;
+    border-color: rgba(100, 150, 255, 0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
 #controls button:active {
@@ -255,11 +298,11 @@ canvas {
 #rpgTitle {
     font-family: 'Cinzel', 'Georgia', serif;
     font-size: 3.5rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--title-color);
     text-shadow: 
-        0 0 10px rgba(173, 216, 230, 0.6),
-        0 0 20px rgba(173, 216, 230, 0.4),
-        0 0 30px rgba(173, 216, 230, 0.2);
+        0 0 10px var(--title-glow),
+        0 0 20px var(--title-glow),
+        0 0 30px var(--title-glow);
     margin-bottom: 2rem;
     letter-spacing: 2px;
     font-weight: 300;
@@ -296,6 +339,26 @@ canvas {
         0 0 30px #00ffff,
         0 0 60px #00ffff,
         0 6px 20px rgba(0,0,0,0.4);
+}
+
+/* Dark mode download button */
+[data-theme="dark"] #rpgDownloadBtn {
+    background: linear-gradient(45deg, #1a1a2e, #16213e);
+    color: #ffffff;
+    border: 2px solid rgba(100, 150, 255, 0.6);
+    box-shadow: 
+        0 0 15px rgba(100, 150, 255, 0.4),
+        0 0 30px rgba(100, 150, 255, 0.2),
+        0 4px 16px rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] #rpgDownloadBtn:hover {
+    background: linear-gradient(45deg, #16213e, #1a1a2e);
+    border-color: rgba(100, 150, 255, 0.8);
+    box-shadow: 
+        0 0 20px rgba(100, 150, 255, 0.6),
+        0 0 40px rgba(100, 150, 255, 0.3),
+        0 6px 20px rgba(0,0,0,0.6);
 }
 
 @keyframes float {

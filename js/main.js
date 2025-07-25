@@ -94,8 +94,58 @@ class WebPetApp {
         const closeSettingsBtn = document.getElementById('closeSettings');
         closeSettingsBtn.addEventListener('click', () => this.hideSettings());
         
+        // Dark mode toggle
+        const darkModeBtn = document.getElementById('darkModeToggle');
+        darkModeBtn.addEventListener('click', () => this.toggleDarkMode());
+        
         // Settings sliders
         this.setupSettingsSliders();
+        
+        // Initialize theme from localStorage
+        this.initializeTheme();
+    }
+    
+    /**
+     * Initialize theme from localStorage
+     */
+    initializeTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('app').setAttribute('data-theme', savedTheme);
+            this.updateDarkModeButton(savedTheme === 'dark');
+        }
+    }
+    
+    /**
+     * Toggle dark mode
+     */
+    toggleDarkMode() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        document.documentElement.setAttribute('data-theme', newTheme);
+        document.getElementById('app').setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        this.updateDarkModeButton(newTheme === 'dark');
+    }
+    
+    /**
+     * Update dark mode button appearance
+     */
+    updateDarkModeButton(isDark) {
+        const darkModeBtn = document.getElementById('darkModeToggle');
+        const icon = darkModeBtn.querySelector('i');
+        const text = darkModeBtn.querySelector('span');
+        
+        if (isDark) {
+            icon.className = 'fas fa-sun';
+            text.textContent = 'Light Mode';
+        } else {
+            icon.className = 'fas fa-moon';
+            text.textContent = 'Dark Mode';
+        }
     }
     
     /**
