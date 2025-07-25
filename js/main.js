@@ -82,10 +82,6 @@ class WebPetApp {
      * Setup UI event listeners
      */
     setupEventListeners() {
-        // Toggle pet button
-        const toggleBtn = document.getElementById('togglePet');
-        toggleBtn.addEventListener('click', () => this.togglePet());
-        
         // Settings button
         const settingsBtn = document.getElementById('settings');
         settingsBtn.addEventListener('click', () => this.showSettings());
@@ -113,8 +109,119 @@ class WebPetApp {
             });
         }
         
+        // Theme toggle in settings panel
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('change', (e) => {
+                const isDark = e.target.checked;
+                const newTheme = isDark ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                document.getElementById('app').setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                this.updateDarkModeButton(isDark);
+            });
+        }
+        
         // Initialize theme from localStorage
         this.initializeTheme();
+
+        // Pet character selector
+        const petSelector = document.getElementById('petSelector');
+        if (petSelector) {
+            petSelector.addEventListener('change', async (e) => {
+                const petName = e.target.value;
+                // Update the animation manager to use the new pet character set
+                if (this.petEngine && this.petEngine.animationManager) {
+                    await this.petEngine.animationManager.loadFromCharacterSets(`resources/CharacterSets/Pets/${petName}`);
+                    // Reset animation state
+                    this.petEngine.animationManager.setAnimation('idle');
+                    // Optionally reset pet position to center
+                    const center = this.petEngine.movementManager.getCanvasCenter();
+                    this.petEngine.movementManager.setPosition(center.x, center.y);
+                }
+            });
+        }
+
+        // Translation dictionary
+        const translations = {
+            en: {
+                title: 'Your Digital Companion',
+                tryOnline: 'Try Online',
+                download: 'Download EXE',
+                settings: 'Settings',
+                togglePet: 'Toggle Pet',
+                darkMode: 'Dark Mode',
+                petSettings: 'Pet Settings',
+                size: 'Size',
+                animationSpeed: 'Animation Speed',
+                movementSpeed: 'Movement Speed',
+                petCharacter: 'Pet Character',
+                language: 'Language',
+                close: 'Close',
+            },
+            zh: {
+                title: '你的数字伙伴',
+                tryOnline: '在线体验',
+                download: '下载 EXE',
+                settings: '设置',
+                togglePet: '切换宠物',
+                darkMode: '夜间模式',
+                petSettings: '宠物设置',
+                size: '大小',
+                animationSpeed: '动画速度',
+                movementSpeed: '移动速度',
+                petCharacter: '宠物角色',
+                language: '语言',
+                close: '关闭',
+            }
+        };
+
+        function updateLanguageUI(lang) {
+            const t = translations[lang] || translations.en;
+            document.getElementById('rpgTitle').textContent = t.title;
+            const tryOnlineBtn = document.getElementById('tryOnlineBtn');
+            if (tryOnlineBtn) tryOnlineBtn.textContent = t.tryOnline;
+            const downloadBtn = document.getElementById('rpgDownloadBtn');
+            if (downloadBtn) downloadBtn.textContent = t.download;
+            const settingsBtn = document.getElementById('settings');
+            if (settingsBtn) settingsBtn.textContent = t.settings;
+            const togglePetBtn = document.getElementById('togglePet');
+            if (togglePetBtn) togglePetBtn.textContent = t.togglePet;
+            const themeLabel = document.querySelector('label[for="themeToggle"]');
+            if (themeLabel) themeLabel.textContent = t.darkMode;
+            const petSettings = document.querySelector('#settingsPanel h3');
+            if (petSettings) petSettings.textContent = t.petSettings;
+            // Dynamic labels
+            const sizeValue = document.getElementById('sizeValue').textContent;
+            const sizeLabel = document.querySelector('label[for="sizeSlider"]');
+            if (sizeLabel) sizeLabel.innerHTML = `${t.size}: <span id='sizeValue'>${sizeValue}</span>px`;
+            const speedValue = document.getElementById('speedValue').textContent;
+            const animLabel = document.querySelector('label[for="speedSlider"]');
+            if (animLabel) animLabel.innerHTML = `${t.animationSpeed}: <span id='speedValue'>${speedValue}</span>ms`;
+            const moveSpeedValue = document.getElementById('moveSpeedValue').textContent;
+            const moveLabel = document.querySelector('label[for="moveSpeedSlider"]');
+            if (moveLabel) moveLabel.innerHTML = `${t.movementSpeed}: <span id='moveSpeedValue'>${moveSpeedValue}</span>px`;
+            const petCharLabel = document.querySelector('label[for="petSelector"]');
+            if (petCharLabel) petCharLabel.textContent = t.petCharacter;
+            const langLabel = document.querySelector('label[for="languageSelector"]');
+            if (langLabel) langLabel.textContent = t.language;
+            const closeBtn = document.getElementById('closeSettings');
+            if (closeBtn) closeBtn.textContent = t.close;
+        }
+
+        // Language selector
+        const languageSelector = document.getElementById('languageSelector');
+        if (languageSelector) {
+            languageSelector.addEventListener('change', (e) => {
+                const lang = e.target.value;
+                localStorage.setItem('language', lang);
+                updateLanguageUI(lang);
+            });
+        }
+        // On load, set language from localStorage
+        const savedLang = localStorage.getItem('language') || 'en';
+        if (languageSelector) languageSelector.value = savedLang;
+        updateLanguageUI(savedLang);
     }
     
     /**
@@ -122,11 +229,13 @@ class WebPetApp {
      */
     initializeTheme() {
         const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-            document.documentElement.setAttribute('data-theme', savedTheme);
-            document.getElementById('app').setAttribute('data-theme', savedTheme);
-            this.updateDarkModeButton(savedTheme === 'dark');
-        }
+        const isDark = savedTheme === 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme || 'light');
+        document.getElementById('app').setAttribute('data-theme', savedTheme || 'light');
+        this.updateDarkModeButton(isDark);
+        // Sync settings panel toggle
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) themeToggle.checked = isDark;
     }
     
     /**
@@ -141,6 +250,9 @@ class WebPetApp {
         localStorage.setItem('theme', newTheme);
         
         this.updateDarkModeButton(newTheme === 'dark');
+        // Sync settings panel toggle
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) themeToggle.checked = (newTheme === 'dark');
     }
     
     /**
@@ -204,8 +316,8 @@ class WebPetApp {
         this.petEngine.start();
         this.isRunning = true;
         
-        const toggleBtn = document.getElementById('togglePet');
-        toggleBtn.textContent = 'Stop Pet';
+        // const toggleBtn = document.getElementById('togglePet'); // This line is removed
+        // toggleBtn.textContent = 'Stop Pet'; // This line is removed
         
         console.log('Pet started');
     }
@@ -219,8 +331,8 @@ class WebPetApp {
         this.petEngine.stop();
         this.isRunning = false;
         
-        const toggleBtn = document.getElementById('togglePet');
-        toggleBtn.textContent = 'Start Pet';
+        // const toggleBtn = document.getElementById('togglePet'); // This line is removed
+        // toggleBtn.textContent = 'Start Pet'; // This line is removed
         
         console.log('Pet stopped');
     }
@@ -228,13 +340,13 @@ class WebPetApp {
     /**
      * Toggle pet on/off
      */
-    togglePet() {
-        if (this.isRunning) {
-            this.stop();
-        } else {
-            this.start();
-        }
-    }
+    // togglePet() { // This function is removed
+    //     if (this.isRunning) {
+    //         this.stop();
+    //     } else {
+    //         this.start();
+    //     }
+    // }
     
     /**
      * Show settings panel

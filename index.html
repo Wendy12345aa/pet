@@ -12,7 +12,7 @@
         <canvas id="petCanvas" width="800" height="600"></canvas>
         
         <div id="controls">
-            <button id="togglePet">Toggle Pet</button>
+            <!-- <button id="togglePet">Toggle Pet</button> -->
             <button id="settings">Settings</button>
             <button id="darkModeToggle">
                 <i class="fas fa-moon"></i>
@@ -37,6 +37,27 @@
             <div class="setting">
                 <label>Movement Speed: <span id="moveSpeedValue">3</span>px</label>
                 <input type="range" id="moveSpeedSlider" min="1" max="10" value="3">
+            </div>
+            <div class="setting">
+                <label for="themeToggle">Dark Mode</label>
+                <input type="checkbox" id="themeToggle">
+            </div>
+            <!--
+            <div class="setting">
+                <label for="petSelector">Pet Character</label>
+                <select id="petSelector">
+                    <option value="New_pet_1753150496386">Mermaid</option>
+                    <option value="ayano">Ayano</option>
+                    <option value="default">Default</option>
+                </select>
+            </div>
+            -->
+            <div class="setting">
+                <label for="languageSelector">Language</label>
+                <select id="languageSelector">
+                    <option value="en">English</option>
+                    <option value="zh">中文</option>
+                </select>
             </div>
             <button id="closeSettings">Close</button>
         </div>

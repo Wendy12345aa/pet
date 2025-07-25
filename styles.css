@@ -203,10 +203,21 @@ canvas {
 }
 
 .setting label {
-    display: block;
-    margin-bottom: 8px;
-    color: #555;
+    color: inherit;
+    font-size: 1rem;
     font-weight: 500;
+    margin-right: 0.5em;
+}
+.setting input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #00b8ff;
+    vertical-align: middle;
+    margin-left: 0.5em;
+    cursor: pointer;
+}
+[data-theme="dark"] .setting input[type="checkbox"] {
+    accent-color: #00ffb8;
 }
 
 .setting input[type="range"] {
