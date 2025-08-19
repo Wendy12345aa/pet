@@ -97,6 +97,26 @@ class WebPetApp {
         // Settings sliders
         this.setupSettingsSliders();
         
+        // ENHANCED: Debug mode toggle with keyboard shortcut
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F12' || (e.ctrlKey && e.key === 'd')) {
+                e.preventDefault();
+                this.toggleDebugMode();
+            }
+            
+            // ENHANCED: Position sync shortcut (Ctrl+S)
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                this.forceSyncPosition();
+            }
+            
+            // ENHANCED: Position indicator toggle shortcut (Ctrl+P)
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                this.togglePositionIndicator();
+            }
+        });
+        
         // Try Online button
         const tryOnlineBtn = document.getElementById('tryOnlineBtn');
         if (tryOnlineBtn) {
@@ -376,6 +396,36 @@ class WebPetApp {
             position: this.petEngine.getPosition(),
             settings: this.petEngine.getSettings()
         };
+    }
+    
+    /**
+     * ENHANCED: Toggle debug mode
+     */
+    toggleDebugMode() {
+        if (this.petEngine) {
+            this.petEngine.toggleDebug();
+            console.log('Debug mode toggled - Press F12 or Ctrl+D to toggle again');
+        }
+    }
+    
+    /**
+     * ENHANCED: Force sync position to fix position tracking bug
+     */
+    forceSyncPosition() {
+        if (this.petEngine) {
+            this.petEngine.forceSyncPosition();
+            console.log('Position sync triggered - Press Ctrl+S to sync again');
+        }
+    }
+    
+    /**
+     * ENHANCED: Toggle position indicator
+     */
+    togglePositionIndicator() {
+        if (this.petEngine) {
+            this.petEngine.togglePositionIndicator();
+            console.log('Position indicator toggled - Press Ctrl+P to toggle again');
+        }
     }
     
     /**
