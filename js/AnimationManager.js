@@ -1,5 +1,13 @@
 /**
  * AnimationManager - Handles sprite loading and frame-based animations
+ * 
+ * ISSUE #1: IMAGE DISTORTION/DEFORMATION
+ * 
+ * The main causes of image distortion are:
+ * 1. Incorrect aspect ratio handling when drawing images
+ * 2. Forced resizing without maintaining proportions
+ * 3. Canvas drawing without considering original image dimensions
+ * 4. Missing image loading error handling
  */
 class AnimationManager {
     constructor() {
@@ -36,6 +44,9 @@ class AnimationManager {
     
     /**
      * Load sprite images for animations
+     * 
+     * POTENTIAL ISSUE: Image loading may fail silently, causing distortion
+     * SOLUTION: Add better error handling and fallback mechanisms
      */
     async loadSprites() {
         try {
@@ -76,6 +87,9 @@ class AnimationManager {
     
     /**
      * Try to load sprites from existing character sets
+     * 
+     * ISSUE: Hardcoded character path may cause loading failures
+     * SOLUTION: Make character path configurable or dynamic
      */
     async loadFromCharacterSets() {
         // Only use the requested character set
@@ -119,6 +133,9 @@ class AnimationManager {
     
     /**
      * Load all frames for a given animation from a character set
+     * 
+     * ISSUE: Hardcoded frame counts may not match actual files
+     * SOLUTION: Dynamically detect frame count or make it configurable
      */
     async loadCharacterSet(characterPath) {
         const animations = ['idle', 'walking', 'pain']; // No special
@@ -147,9 +164,13 @@ class AnimationManager {
     
     /**
      * Load all frames for a given animation from a character set
+     * 
+     * ISSUE: Hardcoded frame counts may cause missing or extra frames
+     * SOLUTION: Use metadata files or dynamic frame detection
      */
     async loadAnimationFrames(characterPath, animationName) {
         // Hardcoded frame counts for New_pet_1753150496386
+        // ISSUE: This is brittle and may not match actual files
         const frameCounts = {
             idle: 2,
             walking: 4,
@@ -174,6 +195,7 @@ class AnimationManager {
             } catch (error) {
                 console.warn(`Failed to load frame: ${framePath}`, error);
             }
+
         }
         
         console.log(`Total frames loaded for ${animationName}: ${frames.length}`);
@@ -182,18 +204,33 @@ class AnimationManager {
     
     /**
      * Load an image and return a Promise that resolves when loaded
+     * 
+     * ISSUE: No validation of image dimensions or quality
+     * SOLUTION: Add image validation and error handling
      */
     loadImage(src) {
         return new Promise((resolve, reject) => {
             const img = new window.Image();
-            img.onload = () => resolve(img);
-            img.onerror = (e) => reject(e);
+            img.onload = () => {
+                // ISSUE: No validation of loaded image
+                // SOLUTION: Add dimension checks and quality validation
+                console.log(`Image loaded successfully: ${src}, dimensions: ${img.naturalWidth}x${img.naturalHeight}`);
+                resolve(img);
+            };
+            img.onerror = (e) => {
+                console.error(`Failed to load image: ${src}`, e);
+                reject(e);
+            };
             img.src = src;
         });
     }
     
     /**
      * Create a default sprite with emoji
+     * 
+     * This creates a canvas-based sprite as fallback
+     * ISSUE: Canvas sprites may not scale properly
+     * SOLUTION: Ensure proper scaling in drawPet method
      */
     createDefaultSprite(color, emoji) {
         const canvas = document.createElement('canvas');
@@ -243,6 +280,9 @@ class AnimationManager {
     
     /**
      * Get current frame image
+     * 
+     * ISSUE: No validation of frame data before returning
+     * SOLUTION: Add frame validation and better error handling
      */
     getCurrentFrame() {
         const frames = this.sprites.get(this.currentAnimation);
@@ -320,4 +360,4 @@ class AnimationManager {
     isAnimationPlaying() {
         return this.isPlaying;
     }
-}
+}}

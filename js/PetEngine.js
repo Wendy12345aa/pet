@@ -1,5 +1,15 @@
 /**
  * PetEngine - Main engine that coordinates all pet systems
+ * 
+ * COORDINATION OF ISSUES:
+ * 
+ * This engine coordinates all three main issues:
+ * 1. Image distortion - handled in drawPet method
+ * 2. Teleporting movement - coordinated through movementManager
+ * 3. Click teleporting - coordinated through interactionManager
+ * 
+ * The engine needs to ensure smooth coordination between all systems
+ * to prevent conflicts that cause the issues.
  */
 class PetEngine {
     constructor(canvas) {
@@ -8,9 +18,9 @@ class PetEngine {
         
         // Settings
         this.settings = {
-            petSize: 256,
+            petSize: 256, // ISSUE: Large size may cause scaling issues
             animationSpeed: 150,
-            movementSpeed: 3,
+            movementSpeed: 3, // ISSUE: May be too high for smooth movement
             isRunning: false
         };
         
@@ -31,6 +41,9 @@ class PetEngine {
     
     /**
      * Initialize the pet engine
+     * 
+     * ISSUE: Initialization may cause instant position changes
+     * SOLUTION: Use smooth initialization with gradual setup
      */
     async initialize() {
         try {
@@ -85,6 +98,9 @@ class PetEngine {
     
     /**
      * Main game loop
+     * 
+     * ISSUE: Frame rate may be too high causing jerky movement
+     * SOLUTION: Use frame-rate independent updates
      */
     gameLoop(currentTime = performance.now()) {
         if (!this.settings.isRunning) return;
@@ -105,6 +121,9 @@ class PetEngine {
     
     /**
      * Update all systems
+     * 
+     * ISSUE: System updates may conflict causing teleporting
+     * SOLUTION: Ensure proper update order and coordination
      */
     update(deltaTime) {
         // Update animation
@@ -127,6 +146,9 @@ class PetEngine {
     
     /**
      * Render the pet
+     * 
+     * ISSUE: Rendering may cause visual artifacts or distortion
+     * SOLUTION: Ensure proper rendering order and quality
      */
     render() {
         // Clear canvas
@@ -147,6 +169,16 @@ class PetEngine {
     
     /**
      * Draw the pet sprite
+     * 
+     * ISSUE #1: IMAGE DISTORTION - This is where image scaling happens
+     * 
+     * The main causes of distortion here are:
+     * 1. Forced resizing without maintaining aspect ratio
+     * 2. Incorrect canvas drawing parameters
+     * 3. Missing image quality settings
+     * 4. Improper scaling calculations
+     * 
+     * SOLUTION: Implement proper aspect ratio preservation and smooth scaling
      */
     drawPet(sprite, x, y) {
         if (!sprite) {
@@ -182,13 +214,30 @@ class PetEngine {
             this.ctx.translate(-x - this.settings.petSize, 0);
         }
         
-        // Draw the sprite
+        // ISSUE: Direct scaling without aspect ratio preservation
+        // SOLUTION: Calculate proper scaling to maintain aspect ratio
+        let drawWidth = this.settings.petSize;
+        let drawHeight = this.settings.petSize;
+        
+        if (sprite instanceof HTMLImageElement) {
+            // Calculate aspect ratio preserving scaling
+            const aspectRatio = sprite.naturalWidth / sprite.naturalHeight;
+            if (aspectRatio > 1) {
+                // Image is wider than tall
+                drawHeight = this.settings.petSize / aspectRatio;
+            } else {
+                // Image is taller than wide
+                drawWidth = this.settings.petSize * aspectRatio;
+            }
+        }
+        
+        // Draw the sprite with proper scaling
         if (sprite instanceof HTMLCanvasElement) {
             // Canvas sprite
-            this.ctx.drawImage(sprite, x, y, this.settings.petSize, this.settings.petSize);
+            this.ctx.drawImage(sprite, x, y, drawWidth, drawHeight);
         } else if (sprite instanceof HTMLImageElement) {
-            // Image sprite
-            this.ctx.drawImage(sprite, x, y, this.settings.petSize, this.settings.petSize);
+            // Image sprite with aspect ratio preservation
+            this.ctx.drawImage(sprite, x, y, drawWidth, drawHeight);
         } else {
             console.warn('Unknown sprite type:', typeof sprite);
             // Draw fallback rectangle
@@ -201,6 +250,9 @@ class PetEngine {
     
     /**
      * Update pet size
+     * 
+     * ISSUE: Size changes may cause instant position adjustments
+     * SOLUTION: Use smooth size transitions
      */
     updatePetSize(newSize) {
         this.settings.petSize = newSize;
@@ -232,6 +284,9 @@ class PetEngine {
     
     /**
      * Update movement speed
+     * 
+     * ISSUE: Speed changes may cause jerky movement
+     * SOLUTION: Use smooth speed transitions
      */
     updateMovementSpeed(newSpeed) {
         this.settings.movementSpeed = newSpeed;
@@ -282,6 +337,9 @@ class PetEngine {
     
     /**
      * Set position
+     * 
+     * ISSUE: Direct position setting may cause teleporting
+     * SOLUTION: Use smooth movement instead of direct positioning
      */
     setPosition(x, y) {
         this.movementManager.setPosition(x, y);
@@ -289,6 +347,9 @@ class PetEngine {
     
     /**
      * Move to target
+     * 
+     * ISSUE: May cause instant movement
+     * SOLUTION: Use smooth movement with proper speed
      */
     moveToTarget(x, y) {
         this.movementManager.setTarget(x, y);
@@ -296,6 +357,9 @@ class PetEngine {
     
     /**
      * Start random movement
+     * 
+     * ISSUE: May cause teleporting if targets are too far
+     * SOLUTION: Use constrained random movement
      */
     startRandomMovement() {
         this.movementManager.startRandomMovement();
@@ -317,6 +381,9 @@ class PetEngine {
     
     /**
      * Update settings
+     * 
+     * ISSUE: Setting changes may cause instant behavior changes
+     * SOLUTION: Use smooth transitions for setting changes
      */
     updateSettings(newSettings) {
         this.settings = { ...this.settings, ...newSettings };
