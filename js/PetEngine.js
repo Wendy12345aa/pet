@@ -20,7 +20,7 @@ class PetEngine {
         this.settings = {
             petSize: 256, // ISSUE: Large size may cause scaling issues
             animationSpeed: 150,
-            movementSpeed: 3, // ISSUE: May be too high for smooth movement
+            movementSpeed: 1.5, // ENHANCED: Reduced from 3 to 1.5 for smoother movement
             isRunning: false
         };
         
@@ -122,15 +122,15 @@ class PetEngine {
     /**
      * Update all systems
      * 
-     * ISSUE: System updates may conflict causing teleporting
+     * ENHANCED: Frame-rate independent updates to prevent teleporting
      * SOLUTION: Ensure proper update order and coordination
      */
     update(deltaTime) {
         // Update animation
         this.animationManager.update(performance.now());
         
-        // Update movement
-        this.movementManager.update();
+        // ENHANCED: Pass deltaTime for frame-rate independent movement
+        this.movementManager.update(deltaTime);
         
         // Update behavior
         this.behaviorManager.update();

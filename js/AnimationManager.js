@@ -360,4 +360,4 @@ class AnimationManager {
     isAnimationPlaying() {
         return this.isPlaying;
     }
-}}
+}

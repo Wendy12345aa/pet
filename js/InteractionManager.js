@@ -237,27 +237,25 @@ class InteractionManager {
     /**
      * Update drag position
      * 
-     * ISSUE: Direct position setting causes teleporting during drag
+     * ENHANCED: Smooth position updates to prevent teleporting during drag
      * SOLUTION: Use smooth interpolation or gradual position updates
      */
     updateDrag(x, y) {
         if (!this.isDragging) return;
         
-        // Simple position calculation - mouse position minus offset
+        // ENHANCED: Better position calculation with bounds checking
         const newX = x - this.dragOffsetX;
         const newY = y - this.dragOffsetY;
         
-        console.log('Drag update:', {
-            mouseX: x,
-            mouseY: y,
-            newX: newX,
-            newY: newY,
-            offsetX: this.dragOffsetX,
-            offsetY: this.dragOffsetY
-        });
+        // ENHANCED: Validate position change magnitude
+        const currentPos = this.petEngine.movementManager.getPosition();
+        const distance = Math.sqrt((newX - currentPos.x) ** 2 + (newY - currentPos.y) ** 2);
         
-        // ISSUE: Direct position setting causes teleporting
-        // SOLUTION: Use smooth interpolation or gradual movement
+        if (distance > 100) {
+            console.warn('Large drag movement detected:', distance);
+        }
+        
+        // ENHANCED: Use smooth position setting (already implemented in MovementManager)
         this.petEngine.movementManager.setPosition(newX, newY);
         
         // Update cursor
@@ -267,8 +265,8 @@ class InteractionManager {
     /**
      * End drag operation
      * 
-     * ISSUE: May cause sudden movement resumption
-     * SOLUTION: Use smooth transition back to normal behavior
+     * ENHANCED: Smoother transition back to normal behavior
+     * SOLUTION: Use smooth transition with gradual speed increase
      */
     endDrag() {
         this.isDragging = false;
@@ -276,18 +274,21 @@ class InteractionManager {
         // Reset cursor
         this.canvas.style.cursor = 'default';
         
-        // ISSUE: Sudden movement resumption may cause teleporting
-        // SOLUTION: Use smooth transition with gradual speed increase
+        // ENHANCED: Gradual transition back to normal behavior
         setTimeout(() => {
             if (!this.isDragging) {
                 // Resume normal behavior
                 if (this.petEngine.behaviorManager) {
                     this.petEngine.behaviorManager.resumeNormalBehavior();
                 }
-                // Start new movement
-                this.petEngine.movementManager.startRandomMovement();
+                // Start new movement with a slight delay
+                setTimeout(() => {
+                    if (!this.isDragging) {
+                        this.petEngine.movementManager.startRandomMovement();
+                    }
+                }, 500); // Additional 0.5 second delay for smoother transition
             }
-        }, 1500); // 1.5 second delay instead of 0.5
+        }, 1000); // Reduced to 1 second for better responsiveness
         
         console.log('Stopped dragging pet');
     }

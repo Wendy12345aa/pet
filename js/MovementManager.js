@@ -17,7 +17,7 @@ class MovementManager {
         this.y = 100;
         this.targetX = 100;
         this.targetY = 100;
-        this.speed = 3; // ISSUE: This speed may be too high for smooth movement
+        this.speed = 1.5; // ENHANCED: Reduced from 3 to 1.5 for smoother movement
         this.isMoving = false;
         this.facingRight = true;
         
@@ -33,10 +33,10 @@ class MovementManager {
         this.movementTimer = null;
         this.lastMovementTime = 0;
         
-        // ISSUE: Missing movement interpolation variables
-        // SOLUTION: Add interpolation for smoother movement
-        this.interpolationFactor = 0.1; // For smooth movement interpolation
+        // ENHANCED: Improved movement interpolation variables
+        this.interpolationFactor = 0.08; // Reduced for smoother movement
         this.lastUpdateTime = 0;
+        this.frameTime = 16.67; // 60 FPS baseline for frame-rate independent movement
     }
     
     /**
@@ -62,20 +62,32 @@ class MovementManager {
     /**
      * Set pet position
      * 
-     * ISSUE: Direct position setting can cause teleporting
-     * SOLUTION: Use smooth interpolation or gradual movement
+     * ENHANCED: Smooth position setting to prevent teleporting
+     * SOLUTION: Use interpolation or gradual movement
      */
     setPosition(x, y) {
-        // ISSUE: Instant position change causes teleporting
-        // SOLUTION: Use interpolation or gradual movement
-        this.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, x));
-        this.y = Math.max(this.bounds.minY, Math.min(this.bounds.maxY, y));
+        // ENHANCED: Validate position change magnitude
+        const oldX = this.x;
+        const oldY = this.y;
+        const distance = Math.sqrt((x - oldX) ** 2 + (y - oldY) ** 2);
         
-        // ISSUE: No validation of position change magnitude
-        // SOLUTION: Add distance checking to prevent large jumps
-        const distance = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
-        if (distance > 100) { // Arbitrary threshold
+        if (distance > 50) { // Reduced threshold for better detection
             console.warn('Large position change detected:', distance);
+        }
+        
+        // ENHANCED: Use smooth interpolation instead of direct setting
+        const clampedX = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, x));
+        const clampedY = Math.max(this.bounds.minY, Math.min(this.bounds.maxY, y));
+        
+        // Apply smooth interpolation
+        this.x += (clampedX - this.x) * this.interpolationFactor;
+        this.y += (clampedY - this.y) * this.interpolationFactor;
+        
+        // Update facing direction based on movement
+        if (clampedX > oldX) {
+            this.facingRight = true;
+        } else if (clampedX < oldX) {
+            this.facingRight = false;
         }
     }
     
@@ -89,32 +101,44 @@ class MovementManager {
     /**
      * Set target position
      * 
-     * ISSUE: Target setting may cause immediate large movements
+     * ENHANCED: Better target validation to prevent teleporting
      * SOLUTION: Add distance validation and gradual target setting
      */
     setTarget(x, y) {
-        this.targetX = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, x));
-        this.targetY = Math.max(this.bounds.minY, Math.min(this.bounds.maxY, y));
+        const clampedX = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, x));
+        const clampedY = Math.max(this.bounds.minY, Math.min(this.bounds.maxY, y));
+        
+        // ENHANCED: Validate target distance before setting
+        const distance = Math.sqrt((clampedX - this.x) ** 2 + (clampedY - this.y) ** 2);
+        
+        if (distance > 150) { // Reduced maximum distance
+            console.warn('Target too far from current position:', distance);
+            // ENHANCED: Use a closer target if too far
+            const maxDistance = 150;
+            const angle = Math.atan2(clampedY - this.y, clampedX - this.x);
+            const newTargetX = this.x + Math.cos(angle) * maxDistance;
+            const newTargetY = this.y + Math.sin(angle) * maxDistance;
+            
+            this.targetX = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, newTargetX));
+            this.targetY = Math.max(this.bounds.minY, Math.min(this.bounds.maxY, newTargetY));
+        } else {
+            this.targetX = clampedX;
+            this.targetY = clampedY;
+        }
+        
         this.isMoving = true;
         
         // Update facing direction
         this.facingRight = this.targetX > this.x;
-        
-        // ISSUE: No validation of target distance
-        // SOLUTION: Add maximum movement distance validation
-        const distance = Math.sqrt((this.targetX - this.x) ** 2 + (this.targetY - this.y) ** 2);
-        if (distance > 200) { // Arbitrary maximum distance
-            console.warn('Target too far from current position:', distance);
-        }
     }
     
     /**
      * Update movement
      * 
-     * ISSUE: Movement may be too fast or jerky
+     * ENHANCED: Frame-rate independent movement with smooth interpolation
      * SOLUTION: Implement smooth interpolation and frame-rate independent movement
      */
-    update() {
+    update(deltaTime = this.frameTime) {
         // Prevent movement if being dragged
         if (this.petEngine && this.petEngine.interactionManager && this.petEngine.interactionManager.isDraggingPet()) {
             this.isMoving = false;
@@ -122,13 +146,16 @@ class MovementManager {
         }
         if (!this.isMoving) return;
         
+        // ENHANCED: Frame-rate independent movement
+        const frameTime = deltaTime / this.frameTime; // Normalize to 60 FPS
+        const adjustedSpeed = this.speed * frameTime;
+        
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // ISSUE: Movement speed may be too high causing teleporting
-        // SOLUTION: Use frame-rate independent movement and lower speed
-        if (distance < this.speed) {
+        // ENHANCED: Use adjusted speed for smoother movement
+        if (distance < adjustedSpeed) {
             // Reached target
             this.x = this.targetX;
             this.y = this.targetY;
@@ -136,10 +163,10 @@ class MovementManager {
             return;
         }
         
-        // Move towards target
+        // ENHANCED: Smooth interpolation movement
         const angle = Math.atan2(dy, dx);
-        const newX = this.x + Math.cos(angle) * this.speed;
-        const newY = this.y + Math.sin(angle) * this.speed;
+        const newX = this.x + Math.cos(angle) * adjustedSpeed;
+        const newY = this.y + Math.sin(angle) * adjustedSpeed;
         
         // Update facing direction based on movement direction
         if (newX > this.x) {
@@ -165,16 +192,16 @@ class MovementManager {
     /**
      * Start random movement
      * 
-     * ISSUE: Random movement can generate positions too far apart
+     * ENHANCED: Better distance constraints to prevent teleporting
      * SOLUTION: Add distance constraints and smooth pathfinding
      */
     startRandomMovement() {
         if (this.isMoving) return;
         let randomX, randomY, distance;
-        const minDistance = 50; // Minimum distance to avoid teleporting
-        const maxDistance = 150; // ISSUE: No maximum distance constraint
+        const minDistance = 30; // ENHANCED: Reduced minimum distance
+        const maxDistance = 120; // ENHANCED: Reduced maximum distance for smoother movement
         let attempts = 0;
-        const maxAttempts = 10; // Prevent infinite loops
+        const maxAttempts = 15; // ENHANCED: Increased attempts for better positioning
         
         do {
             randomX = this.bounds.minX + Math.random() * (this.bounds.maxX - this.bounds.minX);
@@ -182,21 +209,26 @@ class MovementManager {
             distance = Math.sqrt((randomX - this.x) ** 2 + (randomY - this.y) ** 2);
             attempts++;
             
-            // ISSUE: No maximum distance check
-            // SOLUTION: Add maximum distance constraint
+            // ENHANCED: Better distance validation
             if (distance > maxDistance) {
-                console.warn('Random target too far, regenerating...');
                 continue;
             }
         } while (distance < minDistance && attempts < maxAttempts);
         
-        // ISSUE: May still generate far targets if max attempts reached
-        // SOLUTION: Use closest valid position if max attempts reached
+        // ENHANCED: Better fallback positioning
         if (attempts >= maxAttempts) {
-            console.warn('Could not find suitable random position, using closest valid');
-            // Find closest position within bounds
-            randomX = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, this.x + (Math.random() - 0.5) * 100));
-            randomY = Math.max(this.bounds.minY, Math.min(this.bounds.maxY, this.y + (Math.random() - 0.5) * 100));
+            console.log('Using fallback random position');
+            // Generate a position within a smaller radius
+            const fallbackRadius = 80;
+            const angle = Math.random() * Math.PI * 2;
+            const fallbackDistance = minDistance + Math.random() * (fallbackRadius - minDistance);
+            
+            randomX = this.x + Math.cos(angle) * fallbackDistance;
+            randomY = this.y + Math.sin(angle) * fallbackDistance;
+            
+            // Clamp to bounds
+            randomX = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, randomX));
+            randomY = Math.max(this.bounds.minY, Math.min(this.bounds.maxY, randomY));
         }
         
         this.setTarget(randomX, randomY);
@@ -228,14 +260,13 @@ class MovementManager {
     /**
      * Set movement speed
      * 
-     * ISSUE: Speed may be too high causing teleporting
+     * ENHANCED: Better speed validation to prevent teleporting
      * SOLUTION: Add speed validation and limits
      */
     setSpeed(speed) {
-        // ISSUE: No speed validation
-        // SOLUTION: Add minimum and maximum speed limits
-        const minSpeed = 0.5;
-        const maxSpeed = 5.0;
+        // ENHANCED: More conservative speed limits
+        const minSpeed = 0.3;
+        const maxSpeed = 3.0;
         this.speed = Math.max(minSpeed, Math.min(maxSpeed, speed));
         
         console.log(`Movement speed set to: ${this.speed}`);
